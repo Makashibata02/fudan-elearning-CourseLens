@@ -18,6 +18,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .divider { height: 20px; width: 1px; background: #d9e0e9; margin: 0 3px; }
 .help { border-radius: 50%; border: 1px solid #d4dce7; text-align: center; width: 25px; text-decoration: none; color: #506078; }
 #workspace { min-height: calc(100vh - 116px); padding: 24px; overflow: auto; }
+#demo-note { background: #edf4ff; color: #244f8a; border-bottom: 1px solid #cddcf2; padding: 10px 20px; font-size: 13px; }
 #paper { position: relative; margin: 0 auto; background: white; box-shadow: 0 3px 20px #1b345025; }
 #canvas { display: block; }
 .textLayer { inset: 0; }

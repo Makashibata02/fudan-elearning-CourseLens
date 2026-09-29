@@ -5,14 +5,16 @@ const api = globalThis.browser || chrome;
 pdfjs.GlobalWorkerOptions.workerSrc = api.runtime.getURL('vendor/pdf.worker.mjs');
 const $ = (id) => document.getElementById(id);
 const query = new URLSearchParams(location.search);
+const isDemo = query.get('demo') === '1';
 const source = query.get('source');
 const original = query.get('original') || source;
-const name = FdPdf.filename(query.get('name'));
+const name = isDemo ? '演示文件.pdf' : FdPdf.filename(query.get('name'));
 let documentTask, pdf, pageNumber = 1, scale = 1, fitWidth = true, renderTask, textTask, generation = 0, objectUrl, pendingScope;
 
 $('title').textContent = name;
 document.title = `${name} · eLearning PDF 预览`;
-if (FdPdf.fileUrl(original)) { $('original').href = original; $('original').hidden = false; }
+if (!isDemo && FdPdf.fileUrl(original)) { $('original').href = original; $('original').hidden = false; }
+$('demo-note').hidden = !isDemo;
 
 function showStatus(title, detail, retry = false) {
   $('status').hidden = false;
@@ -85,15 +87,21 @@ async function load() {
   generation++;
   renderTask?.cancel(); textTask?.cancel();
   updateControls();
-  showStatus('正在读取 PDF…', '文件只在你的浏览器中处理。');
-  if (!FdPdf.fileUrl(source)) {
+  showStatus('正在读取 PDF…', isDemo ? '演示文件已随扩展安装，无需登录或联网。' : '文件只在你的浏览器中处理。');
+  if (!isDemo && !FdPdf.fileUrl(source)) {
     showStatus('请从 eLearning 打开 PDF', '回到作业页面，点击 PDF 文件名即可预览。');
     return;
   }
   try {
     await documentTask?.destroy();
     if (objectUrl) URL.revokeObjectURL(objectUrl);
-    const bytes = await readPdf(source, { api });
+    let bytes;
+    if (isDemo) {
+      // Fixed bundled resource only. A query parameter cannot select another URL.
+      const response = await fetch(api.runtime.getURL('demo.pdf'));
+      if (!response.ok) throw new Error('内置演示文件缺失，请重新安装扩展后重试。');
+      bytes = new Uint8Array(await response.arrayBuffer());
+    } else bytes = await readPdf(source, { api });
     objectUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
     $('download').href = objectUrl;
     $('download').download = name;
@@ -121,7 +129,7 @@ async function load() {
       $('grant').hidden = false;
       showStatus('需要允许读取文件服务器', `${new URL(error.scope).hostname}\n学校将这个文件转到上述服务器。点击下方按钮，仅允许此服务器；也可以打开原文件。`);
     } else {
-      showStatus('暂时无法预览', error instanceof TypeError ? '无法连接文件服务器。请确认已登录 eLearning，并检查网络。' : error.message || '文件无法读取。', true);
+      showStatus('暂时无法预览', error instanceof TypeError ? (isDemo ? '内置演示文件无法读取，请重新安装扩展后重试。' : '无法连接文件服务器。请确认已登录 eLearning，并检查网络。') : error.message || '文件无法读取。', true);
     }
   }
 }

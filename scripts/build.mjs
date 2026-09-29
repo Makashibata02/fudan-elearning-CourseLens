@@ -4,6 +4,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { deflateSync } from 'node:zlib';
 import vm from 'node:vm';
+import { createHash } from 'node:crypto';
+import { createDemoPdf } from './demo-pdf.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json')));
@@ -13,6 +15,7 @@ const catalogContext = {};
 vm.runInNewContext(await readFile(path.join(root, 'extension/catalog.js'), 'utf8'), catalogContext);
 const sites = Array.from(catalogContext.CanvasPreviewCatalog.platforms, (platform) => `${platform.origin}/*`);
 await mkdir(dist, { recursive: true });
+const checksums = [];
 
 function crc32(bytes) {
   let crc = 0xffffffff;
@@ -44,6 +47,7 @@ for (const browser of ['chromium', 'firefox']) {
   const output = path.join(dist, browser);
   await rm(output, { recursive: true, force: true });
   await cp(path.join(root, 'extension'), output, { recursive: true });
+  await writeFile(path.join(output, 'demo.pdf'), createDemoPdf());
   await mkdir(path.join(output, 'vendor'), { recursive: true });
   for (const file of ['pdf.mjs', 'pdf.worker.mjs']) await cp(path.join(vendor, 'legacy/build', file), path.join(output, 'vendor', file));
   await cp(path.join(vendor, 'web/pdf_viewer.css'), path.join(output, 'vendor/pdf_viewer.css'));
@@ -84,5 +88,7 @@ for (const browser of ['chromium', 'firefox']) {
   await rm(archive, { force: true });
   const result = spawnSync('zip', ['-qr', archive, '.'], { cwd: output, stdio: 'inherit' });
   if (result.status !== 0) throw new Error('ZIP 打包失败，请安装 zip。');
+  checksums.push(`${createHash('sha256').update(await readFile(archive)).digest('hex')}  ${path.basename(archive)}`);
   console.log(`${browser}: ${archive}`);
 }
+await writeFile(path.join(dist, 'SHA256SUMS.txt'), checksums.join('\n') + '\n');
