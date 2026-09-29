@@ -40,6 +40,8 @@
 
 Firefox 补充实测：2026-09-29，在 macOS 使用官方 Firefox 156.0.1、geckodriver 0.37.1、Selenium 4.49.0，实际临时安装构建出的 Firefox ZIP，10 项检查通过：安装欢迎页、默认权限、离线资源示例及参数覆盖防护、模拟 Canvas 点击后渲染两页 PDF、翻页缩放且不自动下载、原下载按钮不被截获、主动下载的文件名和字节、403 提示、跨服务器定向授权提示、非学校来源拒绝。没有意外网络请求或请求拦截错误。
 
+[Firefox 纳入自动检查后的运行记录](https://github.com/sjy0630/fudan-elearning-pdf-preview/actions/runs/36548044739)，代码提交 `cc24a8978b080394f53930488e37ba046c5455e0`：Linux Firefox 156.0 的同样 10 项检查全部通过，意外请求和拦截错误为零；Linux Chromium、Windows Edge 和跨系统包一致性任务也全部通过。`browser-evidence-firefox` 附件提供结果和截图。
+
 Firefox 测试使用全新临时浏览器配置和生成的 PDF；通过 WebDriver BiDi 提供模拟响应，并使用不可连接的本地代理阻止未被拦截的外部请求。Firefox 138+ 的 `--allow-system-access` 仅提供给隔离的测试驱动，以读取扩展页面，不修改发布包的权限。主动下载后 Firefox 可能另开自己的本地 PDF 阅读页，测试将原下载按钮的检查放在主动下载之前，并按扩展阅读页地址识别新标签页。
 
 开发者可运行 `npm run test:firefox`，Selenium 会获取官方稳定版浏览器与驱动；也可设置 `FIREFOX_BINARY`、`GECKODRIVER` 使用指定测试二进制。结果和截图保存在 `output/playwright/firefox/`。这仍然是临时安装测试，不是商店签名、永久安装或真实学校登录的验证。
@@ -48,7 +50,7 @@ Firefox 测试使用全新临时浏览器配置和生成的 PDF；通过 WebDriv
 
 - 用户当前登录状态下的真实课程文件、学校实际 CDN 和多个不同课程。
 - 跨域授权系统对话框的人工确认及授权后的真实 CDN 读取；目前已验证授权提示和权限范围、单元测试验证回退逻辑。
-- Firefox 在更多操作系统和普通用户配置中的表现；目前独立扩展已有上述 macOS Firefox 156 实测，不再只依赖格式检查。
+- Firefox 在更多操作系统和普通用户配置中的表现；目前独立扩展已有上述 macOS / Linux Firefox 156 实测，不再只依赖格式检查。
 - 普通用户 Windows 10/11 设备上的安装体验（CI 的 Windows Server 结果不能替代全部桌面环境）、Firefox 的签名安装，以及实际商店审核。
 - 中国大陆常见校园/家庭网络下的商店访问与安装。扩展运行资源已全部内置，不依赖 GitHub/CDN，但商店可访问性仍要实测。
 
