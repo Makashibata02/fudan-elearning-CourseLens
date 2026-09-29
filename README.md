@@ -50,7 +50,7 @@ npm run verify:packages
 
 自动检查会在 Linux Chromium 与 Windows Edge 中加载扩展、运行模拟课程和离线示例，并保留截图与结果。它还会比较两个系统生成的安装包校验值。检查包只用于测试，不是商店签名安装包。开发者可运行 `npx playwright install chromium` 后执行 `npm run test:browser`；测试使用隔离配置，不读取日常浏览器账号。构建和安装开发依赖需要联网，普通用户安装后的阅读器不依赖这些开发工具。
 
-当前已在 macOS 的 Chromium 155 / Edge 154，以及自动检查环境的 Linux Chromium 153 / Windows Server 2025 Edge 153 中加载独立扩展，验证模拟作业页的 PDF 渲染、翻页、缩放、主动下载、权限失效和跨服务器授权提示。[首次跨系统检查全部通过](https://github.com/sjy0630/fudan-elearning-pdf-preview/actions/runs/36545334728)，Windows 与 Linux 安装包校验值一致。尚未替代真实登录课程文件和普通用户设备的最终验证。Firefox 包通过格式检查，但尚未完成独立扩展的真实浏览器实测。详见[验证记录](docs/VALIDATION.md)。
+当前已在 macOS 的 Chromium 155 / Edge 154 / 官方 Firefox 156，以及自动检查环境的 Linux Chromium 153 / Windows Server 2025 Edge 153 中加载独立扩展，验证模拟作业页的 PDF 渲染、翻页、缩放、主动下载、权限失效和跨服务器授权提示。[首次跨系统检查全部通过](https://github.com/sjy0630/fudan-elearning-pdf-preview/actions/runs/36545334728)，Windows 与 Linux 安装包校验值一致。尚未替代真实登录课程文件、普通用户设备以及商店签名安装的最终验证。详见[验证记录](docs/VALIDATION.md)。
 
 后续功能按[迭代路线图](docs/ROADMAP.md)推进，当前优先解决免油猴和安装便利性。
 

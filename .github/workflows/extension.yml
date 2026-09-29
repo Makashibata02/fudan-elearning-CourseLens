@@ -78,3 +78,27 @@ jobs:
           path: packages
       - name: Compare Linux and Windows packages
         run: diff packages/extension-packages-ubuntu-latest/SHA256SUMS.txt packages/extension-packages-windows-latest/SHA256SUMS.txt
+
+  firefox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run verify:packages
+      - name: Exercise actual Firefox extension
+        run: npm run test:firefox
+        env:
+          SE_AVOID_STATS: 'true'
+      - name: Save Firefox evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-evidence-firefox
+          path: output/playwright/firefox/
+          if-no-files-found: warn
