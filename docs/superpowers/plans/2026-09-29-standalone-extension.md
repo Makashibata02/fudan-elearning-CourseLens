@@ -16,8 +16,10 @@
 
 ## 安装可靠性追加迭代
 
-- [ ] 用固定版本的纯 JavaScript ZIP 实现替代系统命令，测试根目录结构、字节内容及构建稳定性。
-- [ ] 添加包资源、权限、校验值及重复构建检查。
-- [ ] 将已有浏览器手测转为可重复的隔离测试，不访问真实课程或登录页面。
-- [ ] 在 GitHub Actions 实跑 Linux Chromium / Windows Edge，保留证据并比较跨系统安装包。
-- [ ] 根据实际结果更新验证记录，继续保留商店发布阻塞说明。
+- [x] 用固定版本的纯 JavaScript ZIP 实现替代系统命令，测试根目录结构、字节内容及构建稳定性。
+- [x] 添加包资源、权限、校验值及重复构建检查。
+- [x] 将已有浏览器手测转为可重复的隔离测试，不访问真实课程或登录页面。
+- [x] 在 GitHub Actions 实跑 Linux Chromium / Windows Edge，保留证据并比较跨系统安装包。
+- [x] 根据实际结果更新验证记录，继续保留商店发布阻塞说明。
+
+实跑证据：https://github.com/sjy0630/fudan-elearning-pdf-preview/actions/runs/36545334728 。三个任务全部成功；详细范围见 docs/VALIDATION.md。
