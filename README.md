@@ -36,16 +36,19 @@ PDF 直接从学校或学校指定的文件服务器读取，并在浏览器里�
 
 ### 从源码构建
 
-需要 Node.js 22.13.0 或更高版本和 `zip` 命令：
+需要 Node.js 22.13.0 或更高版本（推荐 Node.js 24）；不需要另装 ZIP 工具，Windows、macOS、Linux 使用相同的构建命令：
 
 ```sh
 npm ci --ignore-scripts --omit=optional
 npm test
 npm run check
 npm run build
+npm run verify:packages
 ```
 
 两个浏览器版本与安装 ZIP 位于 `dist/`，每次构建自动生成对应的 `SHA256SUMS.txt` 校验文件。阅读器代码、worker、字体和图片解码资源都随扩展打包，不从远程 CDN 获取执行代码。PDF.js 固定版本及完整性保存在锁文件中，许可证随包提供。
+
+自动检查会在 Linux Chromium 与 Windows Edge 中加载扩展、运行模拟课程和离线示例，并保留截图与结果。它还会比较两个系统生成的安装包校验值。检查包只用于测试，不是商店签名安装包。开发者可运行 `npx playwright install chromium` 后执行 `npm run test:browser`；测试使用隔离配置，不读取日常浏览器账号。构建和安装开发依赖需要联网，普通用户安装后的阅读器不依赖这些开发工具。
 
 当前已在 Chromium 155 和微软 Edge 154 中加载独立扩展，验证模拟作业页的 PDF 渲染、翻页、缩放、主动下载、权限失效和跨服务器授权提示。尚未替代真实登录课程文件的最终验证。Firefox 包通过格式检查，但尚未完成独立扩展的真实浏览器实测。详见[验证记录](docs/VALIDATION.md)。
 

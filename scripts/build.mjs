@@ -1,11 +1,11 @@
 import { cp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { deflateSync } from 'node:zlib';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import { createDemoPdf } from './demo-pdf.mjs';
+import { archiveDirectory } from './archive.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json')));
@@ -85,9 +85,7 @@ for (const browser of ['chromium', 'firefox']) {
   } else manifest.minimum_chrome_version = '120';
   await writeFile(path.join(output, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   const archive = path.join(dist, `fudan-elearning-pdf-preview-${browser}-${pkg.version}.zip`);
-  await rm(archive, { force: true });
-  const result = spawnSync('zip', ['-qr', archive, '.'], { cwd: output, stdio: 'inherit' });
-  if (result.status !== 0) throw new Error('ZIP 打包失败，请安装 zip。');
+  await writeFile(archive, await archiveDirectory(output));
   checksums.push(`${createHash('sha256').update(await readFile(archive)).digest('hex')}  ${path.basename(archive)}`);
   console.log(`${browser}: ${archive}`);
 }
