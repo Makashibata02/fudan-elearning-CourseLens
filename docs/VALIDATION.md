@@ -42,6 +42,8 @@ Firefox 补充实测：2026-09-29，在 macOS 使用官方 Firefox 156.0.1、gec
 
 [Firefox 纳入自动检查后的运行记录](https://github.com/sjy0630/fudan-elearning-pdf-preview/actions/runs/36548044739)，代码提交 `cc24a8978b080394f53930488e37ba046c5455e0`：Linux Firefox 156.0 的同样 10 项检查全部通过，意外请求和拦截错误为零；Linux Chromium、Windows Edge 和跨系统包一致性任务也全部通过。`browser-evidence-firefox` 附件提供结果和截图。
 
+视觉检查发现该 Linux runner 缺少中文字库，工具栏中文显示为缺字方框；英文 PDF 和功能检查正常。该截图只能作为功能验证证据，不能当作中文界面视觉验收或商店宣传图。macOS Firefox 和 Windows Edge 的中文界面截图正常；商店使用已准备的 Edge 截图。
+
 Firefox 测试使用全新临时浏览器配置和生成的 PDF；通过 WebDriver BiDi 提供模拟响应，并使用不可连接的本地代理阻止未被拦截的外部请求。Firefox 138+ 的 `--allow-system-access` 仅提供给隔离的测试驱动，以读取扩展页面，不修改发布包的权限。主动下载后 Firefox 可能另开自己的本地 PDF 阅读页，测试将原下载按钮的检查放在主动下载之前，并按扩展阅读页地址识别新标签页。
 
 开发者可运行 `npm run test:firefox`，Selenium 会获取官方稳定版浏览器与驱动；也可设置 `FIREFOX_BINARY`、`GECKODRIVER` 使用指定测试二进制。结果和截图保存在 `output/playwright/firefox/`。这仍然是临时安装测试，不是商店签名、永久安装或真实学校登录的验证。
