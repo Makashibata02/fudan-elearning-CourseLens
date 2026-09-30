@@ -87,3 +87,9 @@ Firefox 测试使用全新临时浏览器配置和生成的 PDF；通过 WebDriv
 92f711f8af41509446ded0e780f830fa1d3dfc94e2266166759b9f9a02112f0f  fudan-elearning-pdf-preview-chromium-1.1.1.zip
 deaf9cc7240b61b65178a4f68565687db27dcb7b430e1e97bddafe1003fe7b5e  fudan-elearning-pdf-preview-firefox-1.1.1.zip
 ```
+
+### 固定源码快照独立重建
+
+2026-09-30 从 `7bb035640e7ddb1615e7562918f684c30413a9c5` 导出的源码 ZIP 在新目录 `/private/tmp/fudan-source-audit.uEw4QW` 解压测试，不复用原工作目录的 `node_modules`。使用已有 npm 缓存安装锁定依赖（忽略安装脚本及可选依赖），18 项测试、语法检查、双浏览器构建和包校验通过。`cmp` 分别确认新生成的两个 ZIP 与原 1.1.1 候选包逐字节一致。此证据证明该快照在本次环境中可复现，不扩大为跨系统或无缓存离线构建保证。
+
+固定源码 ZIP、哈希和审核员重建说明见 [Firefox 提交清单](FIREFOX-SUBMISSION.md#已准备的固定源码快照)。仅准备本地材料，未签名或提交 Firefox，未正式提交 Edge 草稿。
