@@ -1,6 +1,15 @@
-# 复旦 eLearning PDF 弹窗预览
+# 复旦 eLearning PDF 弹窗预览 · 油猴脚本版
 
 在 eLearning 作业页面点击 PDF 文件名时，用 Chrome 自带的 PDF 阅读器在当前页面打开弹窗。适用于网站自带预览提示“没有预览可用于此文件”的情况。本项目与复旦大学及其 eLearning 平台无官方关联。
+
+## 选择版本
+
+本项目保留两个版本，分别维护，不合并代码：
+
+- **油猴脚本版（当前 `main` 分支）**：需要 Tampermonkey，按下方步骤安装，在当前页面弹窗预览。
+- **独立插件版（`feature/standalone-extension` 分支）**：无需 Tampermonkey，自带阅读器。[查看插件版源码与说明](https://github.com/sjy0630/fudan-elearning-pdf-preview/tree/feature/standalone-extension)；Edge 用户可直接[从微软商店安装](https://microsoftedge.microsoft.com/addons/detail/ibgcgppobifaogaodeimafhpmoonioch)。
+
+普通 Edge 用户推荐商店插件版。请选择其中一种使用，不要同时启用同名油猴脚本和插件。
 
 ## 安装
 
@@ -35,3 +44,11 @@ node --test tests/userscript.test.cjs
 ## 许可
 
 本项目以 [MIT 许可证](LICENSE)发布。
+
+## Star 历史
+
+两个版本属于同一个仓库，下图展示整个项目的 Star 增长趋势。
+
+[![Star History Chart](https://api.star-history.com/svg?repos=sjy0630/fudan-elearning-pdf-preview&type=Date)](https://www.star-history.com/#sjy0630/fudan-elearning-pdf-preview&Date)
+
+图表由第三方 Star History 服务生成，可能存在缓存延迟；若图片未加载，可点击查看图表页面。
