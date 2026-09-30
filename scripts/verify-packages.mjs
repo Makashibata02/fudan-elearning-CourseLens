@@ -20,6 +20,22 @@ for (const browser of ['chromium', 'firefox']) {
   const manifest = JSON.parse(Buffer.from(files['manifest.json']).toString());
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.version, pkg.version);
+  assert.equal(manifest.default_locale, 'zh_CN');
+  assert.equal(manifest.name, '__MSG_extensionName__');
+  assert.equal(manifest.description, '__MSG_extensionDescription__');
+  assert.equal(manifest.action.default_title, '__MSG_actionTitle__');
+  const references = [...JSON.stringify(manifest).matchAll(/__MSG_(\w+)__/g)].map((match) => match[1]);
+  for (const locale of ['zh_CN', 'en']) {
+    const resource = `_locales/${locale}/messages.json`;
+    assert.ok(files[resource]?.length, `Missing ${resource}`);
+    const bytes = Buffer.from(files[resource]);
+    assert.deepEqual(bytes, await readFile(new URL(`extension/${resource}`, root)), `${resource}: source bytes differ`);
+    const messages = JSON.parse(bytes);
+    for (const key of references) {
+      assert.equal(typeof messages[key]?.message, 'string', `${locale}: missing ${key}`);
+      assert.ok(messages[key].message.trim(), `${locale}: empty ${key}`);
+    }
+  }
   assert.deepEqual(manifest.permissions, ['webRequest']);
   assert.deepEqual(manifest.host_permissions, ['https://elearning.fudan.edu.cn/*']);
   assert.deepEqual(manifest.optional_host_permissions, ['https://*/*']);
@@ -37,6 +53,8 @@ for (const browser of ['chromium', 'firefox']) {
   for (const name of Object.keys(files)) {
     assert.ok(!name.includes('\\') && !name.startsWith('/') && !name.split('/').includes('..'), name);
     assert.ok(!/quickjs-eval|node_modules|\.DS_Store/.test(name), name);
+    // Finder/iCloud conflict copies use a space and numeric suffix, including on directories.
+    assert.ok(!name.split('/').some((part) => / \d+(?=\.|$)/.test(part)), `Duplicate copy: ${name}`);
   }
   if (browser === 'firefox') assert.equal(manifest.browser_specific_settings.gecko.id, 'fudan-elearning-pdf-preview@sjy0630');
   else assert.equal(manifest.background.service_worker, 'background.js');

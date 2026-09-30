@@ -25,7 +25,9 @@
 2. 如果安装过同名油猴脚本或手动加载的测试版扩展，请先停用旧版。
 3. 在同一浏览器登录复旦 eLearning，刷新已打开的课程页面，点击 PDF 文件名即可阅读。
 
-商店上架不代表所有课程文件或网络环境均已验证；真实课程访问与国内普通网络的安装体验仍需进一步实测。
+已有同学反馈在不开 VPN 的情况下成功安装；这仅是该同学的安装反馈，不代表所有网络、设备或真实课程 PDF 均已验证。
+
+**商店搜索不到怎么办？** 直接使用上面的[Edge 商店安装页](https://microsoftedge.microsoft.com/addons/detail/ibgcgppobifaogaodeimafhpmoonioch)。2026-09-30 用户反馈中文名、完整名称、`eLearning` 和 `fudan` 搜索均未找到；搜索结果可能受索引、地区和语言影响，原因尚未确认，不能承诺何时可搜到。详见[搜索观察记录](docs/STORE-SEARCH.md)。安装后请在同一浏览器登录、刷新课程页面，并停用重复的用户脚本或手动测试版。
 
 ### Chrome / Edge 手动安装（开发测试）
 
@@ -69,7 +71,9 @@ npm run verify:packages
 
 当前已在 macOS 的 Chromium 155 / Edge 154 / 官方 Firefox 156，以及自动检查环境的 Linux Chromium 153 / Windows Server 2025 Edge 153 中加载独立扩展，验证模拟作业页的 PDF 渲染、翻页、缩放、主动下载、权限失效和跨服务器授权提示。[首次跨系统检查全部通过](https://github.com/sjy0630/fudan-elearning-pdf-preview/actions/runs/36545334728)，Windows 与 Linux 安装包校验值一致。尚未替代真实登录课程文件、普通用户设备以及商店签名安装的最终验证。详见[验证记录](docs/VALIDATION.md)。
 
-后续功能按[迭代路线图](docs/ROADMAP.md)推进，当前优先解决免油猴和安装便利性。
+当前源码版本 1.1.1 是本地维护候选包，尚未发布；上方可下载的公开 Release 仍为 1.1.0。本次语言适配仅覆盖扩展元数据，阅读器和帮助界面仍为中文；商店页面语言需要在开发者后台另行设置。
+
+后续功能按[迭代路线图](docs/ROADMAP.md)推进：先维护安装和分发，再做图片与纯文本，之后扩展学校和阅读器。
 
 ## 原版用户脚本：安装
 

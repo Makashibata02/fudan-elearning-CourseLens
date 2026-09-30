@@ -1,42 +1,64 @@
 # 商店提交材料
 
-状态：安装包已准备；尚未在 Chrome Web Store、Microsoft Edge Add-ons 或 Firefox Add-ons 上架。不要把 ZIP 链接宣传为商店安装链接。
+状态（2026-09-30）：Edge 已上架，[实际安装页](https://microsoftedge.microsoft.com/addons/detail/ibgcgppobifaogaodeimafhpmoonioch)。Chrome Web Store 与 Firefox Add-ons 尚未上架；1.1.1 为本地维护候选，未发布，公开 GitHub Release 仍是 1.1.0。不要将候选 ZIP 称为商店签名包。
 
-## 名称
-复旦 eLearning PDF 预览
+以下两套文案可分别粘贴到商店对应语言字段。包内 `_locales/zh_CN` 与 `_locales/en` 只提供扩展元数据；商店 zh-CN / en-US 页面须由所有者在后台单独添加和保存，不会自动随包设置，也不保证修复搜索结果。扩展阅读器和帮助界面仍为中文。
 
-## 简短介绍
-点击 eLearning 的 PDF 文件名即可阅读，免 Tampermonkey，自带阅读器，文件仅在浏览器中处理。
+## zh-CN
 
-## 详细介绍
-在复旦 eLearning 的作业页面点击 PDF 文件名，即可在新标签页预览。
+名称：复旦 eLearning PDF 预览
 
-- 无需安装 Tampermonkey，也无需复制用户脚本。
-- 安装后可直接体验内置示例 PDF，无需学校账号或联网。
-- 自带 PDF 阅读器，支持翻页、页码跳转、缩放和选择文字。
-- 页面原有下载按钮保留；需要保存时点击阅读器里的“下载 PDF”。
-- 文件直接从学校的文件服务器读取，仅在你的浏览器内处理。
-- 只在复旦 eLearning 工作，不收集浏览记录、密码或文件内容。
+简短介绍：点击复旦 eLearning 的 PDF 文件名即可阅读，免 Tampermonkey，自带阅读器，文件仅在浏览器中处理。
 
-安装后请刷新已经打开的 eLearning 页面。请在当前浏览器登录并使用你有权限访问的课程文件。若曾安装旧版同名用户脚本，请先停用它。本工具与复旦大学或 eLearning 平台无官方关联。
+详细介绍：
 
-## 权限说明
-- 网站访问：仅对复旦 eLearning 注入 PDF 链接处理逻辑，并读取用户点击的文件。
-- webRequest：识别文件下载请求中的服务器重定向。无需 webRequestBlocking，不修改请求。
-- 可选 HTTPS 网站访问：学校可能使用其他文件服务器，仅在遇到此类服务器且用户主动授权后增加相应域名权限。
-- 不需要 tabs、history、cookies、downloads 或 nativeMessaging 权限；不运行远程托管代码。
+在复旦（Fudan）eLearning 的作业页面点击 PDF 文件名，即可在新标签页打开内置阅读器。
 
-## 提交步骤
-1. 优先使用仓库所有者帐号登录 [Edge Partner Center](https://partner.microsoft.com/dashboard/microsoftedge/public/login)。[微软官方说明](https://learn.microsoft.com/en-us/microsoft-edge/extensions/publish/create-dev-account)确认 Edge 扩展开发者注册免费；身份信息与帐号验证由所有者本人完成。Chrome 可能要求一次性开发者注册费。
-2. Chrome 和 Edge 上传 `dist/fudan-elearning-pdf-preview-chromium-1.1.0.zip`；Firefox 上传 `dist/fudan-elearning-pdf-preview-firefox-1.1.0.zip`，由 Mozilla 签名后才能在正式版持续安装。
-3. 填写以上介绍、类别和支持链接，提供隐私声明页面。将 docs/PRIVACY.md 发布到仓库后可用其公开链接作为隐私页。
-4. 已准备 `docs/assets/edge-preview.png`（1280 × 800），截图只使用生成的演示 PDF。不要上传真实课程文件、姓名、学号或登录页面。
-5. 审核员可从欢迎页点击“先体验示例 PDF”，直接验证阅读器，无需学校帐号。完整操作见 docs/REVIEWER-GUIDE.md，不要共享学生帐号或私人文件。
-6. 商店审核通过后，在 README 顶部添加实际商店安装链接，再面向普通用户宣传一键安装。
+- 无需安装 Tampermonkey 或复制用户脚本。
+- 内置示例 PDF，无需学校账号或联网即可体验。
+- 支持翻页、页码跳转、缩放、适合宽度、选择文字和主动下载。
+- 保留页面原有下载按钮；预览不会主动保存文件到下载目录。
+- PDF 直接从学校或学校指定的文件服务器读取，在浏览器内处理，不上传到第三方预览服务。
+- 当前支持复旦 eLearning 的 PDF，不宣称支持其他学校或 Office 文件。阅读器界面为中文。
 
-## 构建可复现性与依赖
-运行 `npm ci --ignore-scripts --omit=optional` 后运行 `npm run build`。PDF.js 固定版本与完整性由 package-lock.json 锁定，许可证随包提供。其 worker、字体、CMaps 和 WASM 均随扩展分发，不从远程 CDN 获取执行代码。
+安装后请在当前浏览器登录 eLearning，刷新已打开的课程页面；停用重复的同名用户脚本或手动测试版。只使用你有权限访问的文件。上限为 100 MiB；扫描 PDF 没有文字层时不能直接选择文字。本项目与复旦大学或 eLearning 平台无官方关联。
 
-## Firefox 自动检查说明
+权限说明：默认仅访问 `https://elearning.fudan.edu.cn/*`；`webRequest` 用于识别文件重定向，不修改请求。若学校使用其他 HTTPS 文件服务器，仅在显示目标域名并由用户主动授权后添加该域名权限。无需 tabs、history、cookies、downloads 或 nativeMessaging 权限。没有统计代码，不收集浏览记录、密码或文件内容；不运行远程托管代码。
 
-Mozilla 的 web-ext 检查未报告错误。PDF.js 的官方 legacy 构建包含兼容性 polyfill 和本地 worker 导入，检查器会对其中 Function、document.write 和动态 import 产生静态警告。扩展不允许 unsafe-eval，传入 isEvalSupported: false，不启用 PDF JavaScript 脚本执行；worker 指向打包的本地文件，未使用的 QuickJS 资源不分发。提交审核时应提供固定版本的 PDF.js 来源、许可证、锁文件和构建命令。静态警告不等于已经通过 Mozilla 人工审核。
+搜索关键词（仅填入商店提供的关键词字段）：复旦、Fudan、eLearning、PDF。
+
+## en-US
+
+Name: Fudan eLearning PDF Preview
+
+Short description: Preview Fudan eLearning PDFs in your browser with a bundled reader. No Tampermonkey or third-party document uploads.
+
+Detailed description:
+
+Click a PDF filename on a Fudan (复旦) eLearning assignment page to open it in a new tab with the bundled reader.
+
+- No Tampermonkey installation or userscript copying required.
+- Try the bundled sample PDF without a school account or an internet connection.
+- Turn pages, jump to a page, zoom, fit width, select text, and download when you choose.
+- Original download buttons remain available. Previewing does not automatically save the file to your downloads folder.
+- PDFs are read directly from the school or its designated file servers and processed in your browser, without uploading documents to third-party preview services.
+- Currently supports PDFs on Fudan eLearning. Other schools and Office documents are not supported. The reader and help interface are in Chinese.
+
+After installation, sign in to eLearning in the same browser and refresh open course pages. Disable duplicate userscripts or manually loaded test versions. Use only files you are authorized to access. The file limit is 100 MiB; scanned PDFs without a text layer do not support text selection. This project is not affiliated with Fudan University or the eLearning platform.
+
+Permissions: Default website access is limited to `https://elearning.fudan.edu.cn/*`. The `webRequest` permission identifies file redirects without modifying requests. If the school uses another HTTPS file server, the reader displays its domain and requests access only after the user chooses to authorize it. No tabs, history, cookies, downloads, or nativeMessaging permission is required. No analytics or collection of browsing history, passwords, or file contents. No remotely hosted executable code.
+
+Search keywords (only where the store provides a keyword field): Fudan, 复旦, eLearning, PDF.
+
+## 共用链接与提交材料
+
+- 隐私页 / Privacy: https://github.com/sjy0630/fudan-elearning-pdf-preview/blob/feature/standalone-extension/docs/PRIVACY.md
+- 支持 / Support: https://github.com/sjy0630/fudan-elearning-pdf-preview/issues
+- 源码 / Source: https://github.com/sjy0630/fudan-elearning-pdf-preview/tree/feature/standalone-extension
+- 截图：`docs/assets/edge-preview.png`（1280 × 800），仅含生成的示例 PDF。
+- 当前本地候选：`dist/fudan-elearning-pdf-preview-chromium-1.1.1.zip`；Firefox 见 [提交清单](FIREFOX-SUBMISSION.md)。
+- 审核员无需学校账号即可从欢迎页打开示例；详见 [审核员指南](REVIEWER-GUIDE.md)。不要共享学生账号或私人文件。
+
+所有者负责后台账号、身份验证、协议、商店语言设置及最终提交。本轮只准备候选和材料，未执行上述操作。
+
+PDF.js 固定为 6.3.289，来源、许可证和构建说明见 Firefox 提交清单。历史 web-ext 静态检查曾无错误，但其警告及结果必须结合具体包和检查器版本阅读；这不是当前候选的自动通过声明，更不是 Mozilla 人工审核批准。

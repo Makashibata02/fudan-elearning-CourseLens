@@ -65,14 +65,14 @@ for (const browser of ['chromium', 'firefox']) {
     await writeFile(path.join(output, icons[size]), icon(size));
   }
   const manifest = {
-    manifest_version: 3, name: '复旦 eLearning PDF 预览', version: pkg.version,
-    description: '点击 eLearning 的 PDF 文件名即可阅读，免 Tampermonkey，自带阅读器，文件仅在浏览器中处理。',
+    manifest_version: 3, name: '__MSG_extensionName__', version: pkg.version,
+    description: '__MSG_extensionDescription__', default_locale: 'zh_CN',
     homepage_url: 'https://github.com/sjy0630/fudan-elearning-pdf-preview',
     permissions: ['webRequest'],
     host_permissions: sites,
     optional_host_permissions: ['https://*/*'],
     content_scripts: [{ matches: sites, js: ['catalog.js', 'core.js', 'content.js'], run_at: 'document_idle' }],
-    action: { default_popup: 'popup.html', default_title: 'eLearning PDF 预览', default_icon: icons },
+    action: { default_popup: 'popup.html', default_title: '__MSG_actionTitle__', default_icon: icons },
     options_ui: { page: 'help.html', open_in_tab: true }, icons,
     content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'none'" },
     background: browser === 'firefox' ? { scripts: ['catalog.js', 'core.js', 'background.js'] } : { service_worker: 'background.js' },
