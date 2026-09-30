@@ -31,7 +31,7 @@
 
 Chrome 和 Edge 使用同一个 Chromium 包；Firefox 使用单独的包。普通 Edge 用户优先选择上方商店安装。
 
-1. 获取 `fudan-elearning-pdf-preview-chromium-1.1.0.zip` 并解压到一个长期保留的文件夹。
+1. 从 [Releases 下载 Chromium 安装包](https://github.com/sjy0630/fudan-elearning-pdf-preview/releases/download/extension-v1.1.0/fudan-elearning-pdf-preview-chromium-1.1.0.zip)，并解压到一个长期保留的文件夹。
 2. Chrome 打开 `chrome://extensions`；Edge 打开 `edge://extensions`。开启“开发者模式”，点击“加载已解压的扩展”，选择包含 `manifest.json` 的文件夹。
 3. 登录 eLearning、刷新作业页面，然后点击 PDF 文件名。
 
@@ -40,6 +40,8 @@ Chrome 和 Edge 使用同一个 Chromium 包；Firefox 使用单独的包。普�
 ### Firefox
 
 Firefox 正式版需要 Mozilla 签名后的扩展才能长期安装，未签名 ZIP 不能作为面向普通用户的安装方式。开发测试可在 `about:debugging#/runtime/this-firefox` 点击“临时载入附加组件”，选择解压包中的 `manifest.json`；浏览器重启后需要重新载入。Firefox 包最低版本为 142。面向普通用户的安装链接将在签名和审核完成后补充。
+
+[下载 Firefox 未签名测试包](https://github.com/sjy0630/fudan-elearning-pdf-preview/releases/download/extension-v1.1.0/fudan-elearning-pdf-preview-firefox-1.1.0.zip)。两个安装包的 [SHA-256 校验文件](https://github.com/sjy0630/fudan-elearning-pdf-preview/releases/download/extension-v1.1.0/SHA256SUMS.txt)及版本说明见[独立插件版 v1.1.0 Release](https://github.com/sjy0630/fudan-elearning-pdf-preview/releases/tag/extension-v1.1.0)。请下载明确标注浏览器名称的 ZIP；GitHub 自动生成的“Source code”是源码，不是可直接加载的扩展包。
 
 ### 文件与权限
 
