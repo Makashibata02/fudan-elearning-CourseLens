@@ -1,8 +1,13 @@
-# 复旦 eLearning PDF 弹窗预览
+# 复旦 eLearning PDF 预览 · 独立插件版
 
 在 eLearning 作业页面点击 PDF 文件名即可阅读，适用于网站提示“没有预览可用于此文件”的情况。本项目与复旦大学及其 eLearning 平台无官方关联。
 
-现在提供两种方式：**独立浏览器扩展（无需 Tampermonkey）**，以及原来的用户脚本。
+本项目保留两个版本，分别维护，不合并代码：
+
+- **独立插件版（当前分支）**：无需 Tampermonkey，推荐 Edge 用户[从微软商店安装](https://microsoftedge.microsoft.com/addons/detail/ibgcgppobifaogaodeimafhpmoonioch)。
+- **油猴脚本版（`main` 分支）**：[查看脚本版及安装说明](https://github.com/sjy0630/fudan-elearning-pdf-preview/tree/main)，需要 Tampermonkey。
+
+请选择其中一种使用，避免同时启用两个版本。
 
 ## 独立扩展：免 Tampermonkey
 
@@ -12,9 +17,19 @@
 
 ![Edge 中的独立扩展阅读器，使用生成的演示 PDF](docs/assets/edge-preview.png)
 
-**当前为本地安装测试版，尚未上架商店。** 商店审核通过后才能通过商店链接一键安装。Chrome 和 Edge 使用同一个 Chromium 包；Firefox 使用单独的包。
+### Edge 商店安装（推荐）
 
-### Chrome / Edge 提前体验
+**Edge 版已上架 Microsoft Edge Add-ons，无需油猴、开发者模式或手动解压。**
+
+1. 用 Edge 打开[官方商店安装页](https://microsoftedge.microsoft.com/addons/detail/ibgcgppobifaogaodeimafhpmoonioch)，点击“获取”并确认添加扩展。
+2. 如果安装过同名油猴脚本或手动加载的测试版扩展，请先停用旧版。
+3. 在同一浏览器登录复旦 eLearning，刷新已打开的课程页面，点击 PDF 文件名即可阅读。
+
+商店上架不代表所有课程文件或网络环境均已验证；真实课程访问与国内普通网络的安装体验仍需进一步实测。
+
+### Chrome / Edge 手动安装（开发测试）
+
+Chrome 和 Edge 使用同一个 Chromium 包；Firefox 使用单独的包。普通 Edge 用户优先选择上方商店安装。
 
 1. 获取 `fudan-elearning-pdf-preview-chromium-1.1.0.zip` 并解压到一个长期保留的文件夹。
 2. Chrome 打开 `chrome://extensions`；Edge 打开 `edge://extensions`。开启“开发者模式”，点击“加载已解压的扩展”，选择包含 `manifest.json` 的文件夹。
@@ -87,3 +102,11 @@ node --test tests/userscript.test.cjs
 ## 许可
 
 本项目以 [MIT 许可证](LICENSE)发布。
+
+## Star 历史
+
+两个版本属于同一个仓库，下图展示整个项目的 Star 增长趋势。
+
+[![Star History Chart](https://api.star-history.com/svg?repos=sjy0630/fudan-elearning-pdf-preview&type=Date)](https://www.star-history.com/#sjy0630/fudan-elearning-pdf-preview&Date)
+
+图表由第三方 Star History 服务生成，可能存在缓存延迟；若图片未加载，可点击查看图表页面。
