@@ -63,4 +63,27 @@ Firefox 测试使用全新临时浏览器配置和生成的 PDF；通过 WebDriv
 - 新增真实构建本地化测试：实现前 Chromium 与 Firefox 两项均因缺少 `default_locale: zh_CN` 失败；实现后通过。
 - `npm test`：18 项全部通过。新增测试验证两个构建清单的精确语言引用、两份语言目录的非空引用解析，以及构建文件与源码字节一致。
 - `npm run check`、`npm run build`、`npm run verify:packages` 全部通过；每个 ZIP 302 个资源，检查权限、固定 Firefox ID、语言引用、语言文件源码字节、数字副本后缀、SHA-256 及重复打包一致性。
-- 本节结果仅适用于本地候选，不代表已发布、Mozilla 签名或商店审核通过。当前候选的浏览器与 web-ext 结果需以实际追加记录为准，不沿用上方历史结论。
+- 本节结果仅适用于本地候选，不代表已发布、Mozilla 签名或商店审核通过。
+
+### 本轮浏览器与 Firefox 静态检查
+
+被测扩展源码提交：`ea1291135cdb0f28d2752ed29b67c08ccebb1728`。运行环境 macOS，Node.js 25.8.2；以下为 2026-09-30 新运行结果，不沿用历史结论。
+
+| 浏览器 | 最终结果 | 本地结果目录（不纳入 Git） |
+| --- | --- | --- |
+| Edge 154.0.4258.37，隔离临时配置 | 10 / 10 通过 | `output/playwright/edge-1.1.1/` |
+| Chrome for Testing 155（缓存 Chromium 1247） | 10 / 10 通过 | `output/playwright/chromium-1.1.1/` |
+| Firefox 156.0.1，geckodriver 0.37.1 | 10 / 10 通过 | `output/playwright/firefox-1.1.1/` |
+
+检查内容包括离线示例、模拟课程 PDF、文字层/翻页/缩放、预览不自动下载、主动下载文件名和字节、原下载控件、403 提示、单域授权提示及拒绝外部来源。最终报告中的意外请求、页面异常（Chromium/Edge）和拦截异常（Firefox）均为零。仍未测试真实课程登录、真实 CDN 授权或签名安装；未重新执行 Windows/Linux CI，也未逐语言做浏览器元数据显示验收。
+
+运行过程限制：沙盒内 Firefox 不能监听本地测试端口，Edge 启动失败；获准在沙盒外使用全新隔离配置后完成。默认 Playwright Chromium 1243 缓存不存在，改用已缓存的 Chromium 1247，未新下载浏览器。一次 Edge 重跑与会重建 `dist` 的 `npm test` 重叠，在“原下载控件”检查中出现页面数 `6 !== 5`；该次事件未被默认阻止的断言通过。停止并行重建后，独立复跑 10 项通过；失败报告保留于 `output/playwright/edge-1.1.1-interrupted/`，但没有据此断言页面数变化的唯一原因。后续应串行运行构建与浏览器测试。
+
+`web-ext 10.7.0 lint --source-dir dist/firefox --output json`：0 错误、0 notices、8 条警告，均位于打包的 PDF.js legacy 资源。原始报告见 [firefox-lint-1.1.1.json](reports/firefox-lint-1.1.1.json)，解释见 [Firefox 提交清单](FIREFOX-SUBMISSION.md)。这不等于 Mozilla 签名或人工审核通过。
+
+本轮最终包 SHA-256（与 `dist/SHA256SUMS.txt` 一致）：
+
+```text
+92f711f8af41509446ded0e780f830fa1d3dfc94e2266166759b9f9a02112f0f  fudan-elearning-pdf-preview-chromium-1.1.1.zip
+deaf9cc7240b61b65178a4f68565687db27dcb7b430e1e97bddafe1003fe7b5e  fudan-elearning-pdf-preview-firefox-1.1.1.zip
+```

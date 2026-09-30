@@ -35,6 +35,23 @@ npm run verify:packages
 
 ## 审核员操作与权限
 
+### 本轮静态检查附件
+
+2026-09-30 使用 **web-ext 10.7.0** 对本地 1.1.1 的 `dist/firefox` 执行 `web-ext lint --source-dir dist/firefox --output json`，结果 **0 错误、0 notices、8 条警告**。[原始 JSON 报告](reports/firefox-lint-1.1.1.json)随本材料保存；对应 ZIP 哈希见 [验证记录](VALIDATION.md)。
+
+| 文件 | 行号 | 检查器警告 |
+| --- | --- | --- |
+| `vendor/pdf.mjs` | 1476 | `DANGEROUS_EVAL`：Function 构造器 |
+| `vendor/pdf.mjs` | 2471、2491 | `UNSAFE_VAR_ASSIGNMENT`：兼容代码的 document.write |
+| `vendor/pdf.mjs` | 22958 | `UNSAFE_VAR_ASSIGNMENT`：动态 import |
+| `vendor/pdf.worker.mjs` | 1418 | `DANGEROUS_EVAL`：Function 构造器 |
+| `vendor/pdf.worker.mjs` | 2359、2379 | `UNSAFE_VAR_ASSIGNMENT`：兼容代码的 document.write |
+| `vendor/pdf.worker.mjs` | 15548 | `UNSAFE_VAR_ASSIGNMENT`：动态 import |
+
+这些位置来自固定版本上游依赖，未为消除警告而修改 vendor 文件。审核时提供上游来源、锁文件和构建步骤，并说明 CSP、`isEvalSupported: false` 与本地 worker 路径。警告说明不代替 Mozilla 对依赖及执行路径的审查。当前未申请签名，未正式提交。
+
+### 所有者提交前确认
+
 - [ ] 提供 [审核员指南](REVIEWER-GUIDE.md) 和欢迎页内“先体验示例 PDF”：无需学校账号或网络，可测试生成的两页 PDF、文字选择、翻页、缩放和主动下载。不得向学生索取账号或提交真实课程资料。
 - [ ] 说明模拟课程测试与真实学校登录测试的边界；自动化结果见 [验证记录](VALIDATION.md)。
 - [ ] 默认网站访问仅 `https://elearning.fudan.edu.cn/*`；`webRequest` 只识别文件重定向，不修改请求。可选 `https://*/*` 仅供用户在阅读器看到具体文件服务器域名后主动授予单域权限。
