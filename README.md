@@ -71,7 +71,7 @@ npm run verify:packages
 
 当前已在 macOS 的 Chromium 155 / Edge 154 / 官方 Firefox 156，以及自动检查环境的 Linux Chromium 153 / Windows Server 2025 Edge 153 中加载独立扩展，验证模拟作业页的 PDF 渲染、翻页、缩放、主动下载、权限失效和跨服务器授权提示。[首次跨系统检查全部通过](https://github.com/sjy0630/fudan-elearning-pdf-preview/actions/runs/36545334728)，Windows 与 Linux 安装包校验值一致。尚未替代真实登录课程文件、普通用户设备以及商店签名安装的最终验证。详见[验证记录](docs/VALIDATION.md)。
 
-当前源码版本 1.1.1 是本地维护候选包，尚未发布；上方可下载的公开 Release 仍为 1.1.0。本次语言适配仅覆盖扩展元数据，阅读器和帮助界面仍为中文；商店页面语言需要在开发者后台另行设置。
+当前源码版本 1.1.1 已推送到独立扩展分支，并已上传到 Edge 后台更新草稿，尚未提交审核或正式发布；上方可下载的公开 Release 仍为 1.1.0。本次语言适配仅覆盖扩展元数据，阅读器和帮助界面仍为中文。中英文商店条目已分别填写并保存；详见[更新草稿记录](docs/releases/extension-v1.1.1-draft.md)。
 
 后续功能按[迭代路线图](docs/ROADMAP.md)推进：先维护安装和分发，再做图片与纯文本，之后扩展学校和阅读器。
 

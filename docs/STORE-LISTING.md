@@ -1,8 +1,10 @@
 # 商店提交材料
 
-状态（2026-09-30）：Edge 已上架，[实际安装页](https://microsoftedge.microsoft.com/addons/detail/ibgcgppobifaogaodeimafhpmoonioch)。Chrome Web Store 与 Firefox Add-ons 尚未上架；1.1.1 为本地维护候选，未发布，公开 GitHub Release 仍是 1.1.0。不要将候选 ZIP 称为商店签名包。
+状态（2026-09-30）：Edge 已上架 1.1.0，[实际安装页](https://microsoftedge.microsoft.com/addons/detail/ibgcgppobifaogaodeimafhpmoonioch)。1.1.1 源码已推送扩展分支，安装包已通过 Edge 后台包验证，Chinese (China) 与 English 条目均已保存为 Complete；尚未点击 Publish 或提交审核。Chrome Web Store 与 Firefox Add-ons 尚未上架；公开 GitHub Release 仍是 1.1.0。不要将候选 ZIP 称为商店签名包。详见[更新草稿记录](releases/extension-v1.1.1-draft.md)。
 
 以下两套文案可分别粘贴到商店对应语言字段。包内 `_locales/zh_CN` 与 `_locales/en` 只提供扩展元数据；商店 zh-CN / en-US 页面须由所有者在后台单独添加和保存，不会自动随包设置，也不保证修复搜索结果。扩展阅读器和帮助界面仍为中文。
+
+实际上传 1.1.1 后，后台根据包生成了 **Chinese (China)** 和 **English** 两个待填写条目；下方英文文案已用于 English 条目。线上 1.1.0 原有的 English (United States) 与新草稿的 English 标签需区分。包内语言会影响后台候选条目，但不会替代描述、图标等内容的填写和保存。
 
 ## zh-CN
 
@@ -59,6 +61,6 @@ Search keywords (only where the store provides a keyword field): Fudan, 复旦, 
 - 当前本地候选：`dist/fudan-elearning-pdf-preview-chromium-1.1.1.zip`；Firefox 见 [提交清单](FIREFOX-SUBMISSION.md)。
 - 审核员无需学校账号即可从欢迎页打开示例；详见 [审核员指南](REVIEWER-GUIDE.md)。不要共享学生账号或私人文件。
 
-所有者负责后台账号、身份验证、协议、商店语言设置及最终提交。本轮只准备候选和材料，未执行上述操作。
+后续经所有者授权已上传安装包、填写并保存中英文描述、图标、演示截图及四个搜索词（复旦、Fudan、eLearning、PDF）。本轮没有接受新协议或正式提交审核；最终提交仍需所有者确认。
 
 PDF.js 固定为 6.3.289，来源、许可证和构建说明见 Firefox 提交清单。历史 web-ext 静态检查曾无错误，但其警告及结果必须结合具体包和检查器版本阅读；这不是当前候选的自动通过声明，更不是 Mozilla 人工审核批准。
