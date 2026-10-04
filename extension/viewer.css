@@ -53,5 +53,7 @@ button[aria-pressed="true"]{background:#e8f1ff;border-color:#2456a6;color:#2456a
 .paper canvas{display:block}
 #other-document{margin:0 auto;max-width:none}
 #other-document canvas,#other-document img{display:block;max-width:none;box-shadow:0 3px 18px #17305025}
+.ppt-page{position:relative;margin:0 auto 12px;background:white;box-shadow:0 3px 18px #17305025;overflow:hidden}
+.ppt-page>svg{display:block;width:100%;height:100%}
 .status{position:absolute;z-index:20;top:24px;left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 32px));margin:0;padding:24px}
 @media(max-width:640px){.toolbar{gap:7px;padding:6px}.brand{flex-basis:100%}.actions{flex-wrap:wrap}.controls{gap:5px}button,.button,select{padding:5px 7px}#workspace{padding:8px}.divider{display:none}#archive-panel{flex-wrap:wrap}#archive-entry{max-width:100%}}

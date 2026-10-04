@@ -1,50 +1,61 @@
 # CourseLens · 复旦 eLearning 文件阅读器
 
-面向学生与助教，在复旦 eLearning 中直接阅读课程和作业附件：SpeedGrader 左侧阅读、右侧评分，普通课程附件在当前页面弹窗打开。
+在 eLearning 点开课件或作业附件，就能直接阅读。平时看课程资料不用来回下载、切换软件；助教批改作业时，也可以在 SpeedGrader 左侧看附件，右侧继续评分和写评语。
 
-这是 [sjy0630/fudan-elearning-pdf-preview](https://github.com/sjy0630/fudan-elearning-pdf-preview) 独立插件分支的衍生项目。**本仓库的 `main` 是浏览器插件源码**，当前维护 Chrome / Microsoft Edge。与复旦大学及 eLearning 平台无官方关联。
+支持 **PDF、DOCX、PPT / PPTX、HEIC、常见图片、文本和 ZIP**。适用于 Chrome 和 Microsoft Edge，无需 Tampermonkey。本项目是非官方工具，与复旦大学及 eLearning 平台无官方关联。
 
-## 安装与更新
+## 能做什么
 
-当前候选版本 **2.1.1**。本项目 尚未发布商店版本或 GitHub Release；原作者的商店安装链接不代表本项目的功能版本。
+普通课程页面的附件会在当前页面弹窗打开，按 Esc 或点击“关闭”即可回到课程。SpeedGrader 中则使用左侧的阅读区域，多个附件可以用下拉框切换。
 
-1. 本地构建后解压 `dist/fudan-elearning-courselens-chromium-2.1.1.zip`，或直接使用仓库的 `dist/chromium`。
-2. Chrome 打开 `chrome://extensions`，Edge 打开 `edge://extensions`；开启开发者模式，选择“加载已解压的扩展”，选中包含 `manifest.json` 的目录。
-3. 登录 eLearning 并刷新课程页面。若已启用同类预览插件或脚本，请停用重复版本。
+默认“适应页面”，让一页课件、一页 PDF 或一张照片完整显示。多页文件默认连续滚动；习惯逐页看的话，可以切换成“手动翻页”。字太小时，还可以放大或选择“适应宽度”。
 
-Chrome 与 Edge 使用同一个 Chromium 安装包。更新文件后在扩展管理页点击“重新加载”，再刷新 eLearning。手动安装不会自动接收商店更新。
-
-推送后的检查结果和候选安装包见 [GitHub Actions](https://github.com/Makashibata02/fudan-elearning-CourseLens/actions/workflows/extension.yml)。请以实际成功的工作流为准；自动生成的 GitHub Source code ZIP 不是可直接安装的插件包。
-
-## 使用
-
-- 在 SpeedGrader 点击文件名或“阅读作业附件”，左侧显示阅读器。下拉框切换附件，“关闭”恢复原页面，评分和评语继续使用学校功能。
-- 默认“适应页面”，完整显示一页或一张照片。可切换“适应宽度”或手动缩放查看细节。
-- 多页 PDF / DOCX 默认连续滚动；阅读方式可切换为手动翻页，两种方式均可跳页。
-- 普通课程附件优先弹窗阅读，可点击背景、关闭或按 Esc 退出；也可主动选择新标签页。
-- ZIP 显示包内文件列表和目录路径，选择文件后解压并预览。其他类型可单独下载。
-- 原下载图标和 Ctrl / Command / Shift 点击保留浏览器原行为。扩展菜单提供 PDF / DOCX / ZIP 示例及本地文件入口。
-
-| 类型 | 支持内容 |
+| 文件 | 阅读方式 |
 | --- | --- |
-| PDF | 连续 / 手动翻页、跳页、整页 / 宽度适应、缩放、文字选择、密码输入和下载 |
-| DOCX | 分页、文字、表格、图片、页眉页脚、脚注及支持的 OMML 数学公式 |
-| HEIC / HEIF | 苹果照片本地解码；多图容器当前显示第一张照片 |
-| PNG / JPEG / GIF / WebP / BMP | 整张显示与缩放 |
-| TXT / MD / CSV / TSV / JSON / LOG / 常见代码 / TEX | 纯文本显示，UTF-8、带 BOM 的 UTF-16、GB18030 回退 |
-| ZIP | Stored / Deflate 压缩，预览其中支持的文件，单独下载其他文件 |
+| PDF | 翻页、跳页、缩放、文字选择；加密 PDF 可输入密码打开 |
+| DOCX | 阅读分页正文、表格、图片和支持的数学公式 |
+| PPT / PPTX | 按静态幻灯片阅读文字、图片和支持的图形；保留幻灯片顺序 |
+| HEIC / HEIF | 直接打开苹果手机照片，无需先转换格式；多图文件目前显示第一张 |
+| PNG / JPEG / GIF / WebP / BMP | 整张显示，也可以放大查看细节 |
+| TXT / MD / CSV / JSON / 代码 / TEX 等 | 按纯文本阅读，支持常见中文编码 |
+| ZIP | 查看包内目录和文件，选择支持的附件直接阅读，也可单独下载 |
 
-DOCX 排版可能与 Word 不同，复杂图形、图表、SmartArt 和部分公式请下载核对。旧版 DOC 需另存为 DOCX 或 PDF。文本和代码不执行；扫描 PDF 未包含 OCR。阅读器不提供画笔批注、自动评分或成绩提交。
+文件仍然可以下载。学校原有的下载按钮和 Ctrl / Command / Shift 点击保留原来的行为，需要独立阅读时也能主动打开新标签页。
 
-单文件最多 100 MiB，文本 8 MiB，照片 5000 万像素。ZIP 最多 2048 个条目，单文件解压最多 100 MiB、声明总量最多 300 MiB；校验实际大小及 CRC，忽略苹果辅助文件。不支持加密、分卷、ZIP64 和嵌套 ZIP 的直接预览。DOCX 另有压缩结构及条目大小检查。
+## 安装
 
-## 隐私与权限
+当前版本 **2.2.0**，暂时采用手动安装。Chrome 和 Edge 使用同一个安装包。
 
-默认仅访问 `https://elearning.fudan.edu.cn/*`；跨文件服务器时按实际目标域名申请权限。附件在浏览器本地解析，执行代码随包提供，不上传在线转换服务。不会修改成绩、评语或发布状态。详见 [隐私说明](docs/PRIVACY.md)。
+1. 打开 [GitHub Actions](https://github.com/Makashibata02/fudan-elearning-CourseLens/actions/workflows/extension.yml)，选择最新一次成功的检查，下载 `extension-packages-windows-latest` 附件。下载 Actions 附件需要登录 GitHub。
+2. 解压下载的附件，再解压其中的 `fudan-elearning-courselens-chromium-2.2.0.zip`，放到一个长期保留的文件夹。
+3. Chrome 打开 `chrome://extensions`；Edge 打开 `edge://extensions`。开启“开发者模式”，点击“加载已解压的扩展”，选择包含 `manifest.json` 的文件夹。
+4. 在同一浏览器登录复旦 eLearning，刷新已经打开的课程页面，再点击附件文件名。
+
+如果使用本地构建，可以直接加载 `dist/chromium`。安装包里同时提供源码 ZIP 和 SHA-256 校验文件；GitHub 自动生成的“Source code”只包含源码，不能直接作为插件安装。
+
+更新时替换安装目录中的文件，在扩展管理页点击“重新加载”，再刷新 eLearning。手动安装的版本不会自动更新。已启用其他同类预览脚本或插件的话，请先停用重复版本，避免点击冲突。
+
+### 没有学校账号，也能先试试
+
+点击浏览器工具栏中的 CourseLens 图标，可以打开 PDF、DOCX、PPTX 和 ZIP 示例，也能选择本地文件。示例随插件打包，断网也能阅读。
+
+## 文件与隐私
+
+附件直接从学校或你允许的文件服务器读取，在浏览器本地解析，**不会上传到在线转换或预览服务**。阅读器所需的代码随安装包提供，不会从 CDN 临时加载；插件不会改动成绩、评语或提交状态。
+
+默认网站权限只覆盖复旦 eLearning。如果文件跳转到其他服务器，阅读器会显示实际域名，再由你选择是否允许访问。预览会传输文件到浏览器，只有点击下载时才主动保存到下载目录。详见[隐私说明](docs/PRIVACY.md)。
+
+## 目前的限制
+
+DOCX、PPT 和 PPTX 的字体、复杂图表、SmartArt、特殊公式和排版可能与 Office 不同。课件当前以静态页面显示，不播放动画、音视频，也不支持加密课件；遇到缺失内容时，请下载原文件核对。旧版 DOC 需要另存为 DOCX 或 PDF，XLS / XLSX、PPTM 等暂不直接预览。
+
+扫描 PDF 如果没有文字层，就无法选中文字；文本、Markdown 和 LaTeX 源码按纯文本显示。阅读器目前没有画笔批注、OCR 或自动评分功能。
+
+单文件上限 100 MiB，文本预览 8 MiB，照片 5000 万像素，课件最多 500 页。ZIP 最多 2048 个文件，按选择解压并检查实际大小和 CRC；加密、分卷、ZIP64 和嵌套 ZIP 暂不直接预览。Office 文件也有压缩结构和解压大小检查，异常或过大的文件会提示下载阅读。
 
 ## 从源码构建
 
-推荐 Node.js 24，最低 22.13。依赖及完整性固定在锁文件中。保留 optional dependencies，esbuild 需要对应平台的二进制包。
+需要 Node.js 22.13 或更高版本，推荐 Node.js 24。Windows、macOS 和 Linux 使用相同命令，不需要另装 ZIP 工具：
 
 ```sh
 npm ci --ignore-scripts
@@ -55,12 +66,12 @@ npm run package:source
 npm run verify:packages
 ```
 
-`dist/chromium` 为安装目录；`dist/*.zip` 为最新版安装 / 源码包；`dist/SHA256SUMS.txt` 为校验值。构建会清理本项目旧版本产物，源码包排除 `.git`、依赖、构建输出及私人文件，并包含工作树中的新增文件。
+安装目录、最新版安装包和源码包位于 `dist/`。不要省略 optional dependencies，esbuild 需要对应平台的二进制包。
 
-自动测试保留上游的 Linux Chromium / Windows Edge 检查及跨系统包一致性比较。浏览器测试使用隔离配置和模拟课程，不访问真实学生资料。验证状态见 [验证记录](docs/VALIDATION.md)，贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+自动检查会在 Linux Chromium 和 Windows Edge 中加载插件，测试离线示例和模拟课程，并比较两个系统的安装包。模拟测试不代替真实课程验收，具体结果见[验证记录](docs/VALIDATION.md)。想参与维护，可以查看[贡献说明](CONTRIBUTING.md)。
 
-## 来源与许可
+## 感谢与开源
 
-保留上游 Git 历史和作者版权；来源基线见 [来源说明](docs/UPSTREAM.md)。本项目 独立维护，向原作者的 PR 暂缓，待获得其同意后再讨论。
+CourseLens 基于 [sjy0630/fudan-elearning-pdf-preview](https://github.com/sjy0630/fudan-elearning-pdf-preview) 的独立插件分支继续开发，感谢原作者提供的 PDF 阅读基础。本仓库独立维护，`main` 为浏览器插件源码，并保留原作者版权和 Git 历史。
 
-项目代码沿用 MIT；第三方代码分别遵循其许可证，HEIC 解码器使用 LGPL-3.0，对应源码和构建说明随包提供。详见 [第三方说明](THIRD-PARTY-NOTICES.md)。
+项目代码采用 MIT 许可证。PDF、Word、PowerPoint、HEIC 等阅读能力来自相应开源库，许可证和 HEIC 解码器对应源码随包提供，详见[第三方说明](THIRD-PARTY-NOTICES.md)和[来源说明](docs/UPSTREAM.md)。向原作者提交 PR 的事宜仍等待沟通确认。

@@ -17,7 +17,7 @@ test('SpeedGrader submission download routes preserve authorization and remove i
 });
 
 test('image/text formats and unsupported office formats do not turn into PDFs', () => {
-  for (const [name, format] of [['a.DOCX', 'docx'], ['图.jpg', 'image'], ['a.py', 'text'], ['a.csv', 'text'], ['旧.doc', 'unsupported'], ['a.xlsx', 'unsupported']]) {
+  for (const [name, format] of [['a.DOCX', 'docx'], ['a.PPT', 'powerpoint'], ['a.PPTX', 'powerpoint'], ['图.jpg', 'image'], ['a.py', 'text'], ['a.csv', 'text'], ['旧.doc', 'unsupported'], ['a.xlsx', 'unsupported']]) {
     assert.equal(core.describe(`${origin}/files/1`, name).format, format);
     assert.equal(core.filename(name), name);
   }

@@ -8,6 +8,7 @@ import { createDemoPdf } from './demo-pdf.mjs';
 import { archiveDirectory } from './archive.mjs';
 import { build } from 'esbuild';
 import { createDemoDocx } from './demo-docx.mjs';
+import { createDemoPptx } from './demo-pptx.mjs';
 import { buildHeicWorker } from './heic-worker.mjs';
 import { zipSync, strToU8 } from 'fflate';
 
@@ -65,6 +66,10 @@ for (const browser of ['chromium']) {
   await mkdir(path.join(output, 'vendor'), { recursive: true });
   const bundle = await build({ absWorkingDir: root, tsconfigRaw: {}, entryPoints: ['./extension/docx.mjs'], bundle: true, format: 'esm', platform: 'browser', target: 'chrome120', outfile: path.join(output, 'vendor/docx.bundle.mjs'), minify: true, legalComments: 'eof', metafile: true });
   await build({ absWorkingDir: root, tsconfigRaw: {}, entryPoints: ['./extension/zip-worker.mjs'], bundle: true, format: 'esm', platform: 'browser', target: 'chrome120', outfile: path.join(output, 'vendor/zip.worker.mjs'), minify: true, legalComments: 'eof' });
+  for (const [entry, file] of [['powerpoint', 'powerpoint.bundle'], ['powerpoint-worker', 'powerpoint.worker']]) {
+    await build({ absWorkingDir: root, tsconfigRaw: {}, entryPoints: [`./extension/${entry}.mjs`], bundle: true, format: 'esm', platform: 'browser', target: 'chrome120', outfile: path.join(output, `vendor/${file}.mjs`), minify: true, legalComments: 'eof' });
+  }
+  await cp(path.join(root, 'node_modules/@web-ppt/core/LICENSE'), path.join(output, 'vendor/web-ppt-core-LICENSE.txt'));
   await buildHeicWorker(root, output);
   await cp(path.join(root, 'node_modules/heic-to/LICENSE'), path.join(output, 'vendor/heic-to-LICENSE.txt'));
   await cp(path.join(root, 'node_modules/heic-to/dist/csp/heic-to.js'), path.join(output, 'vendor/heic-to-upstream-source.txt'));
@@ -87,8 +92,10 @@ for (const browser of ['chromium']) {
     }
   }
   await writeFile(path.join(output, 'demo.docx'), createDemoDocx());
+  await writeFile(path.join(output, 'demo.pptx'), createDemoPptx());
   await writeFile(path.join(output, 'demo.zip'), zipSync({
     '作业/两页示例.pdf': createDemoPdf(), '作业/公式与表格.docx': createDemoDocx(),
+    '课件/两页示例.pptx': createDemoPptx(),
     '说明.txt': strToU8('ZIP 内的文件可以通过顶部下拉框切换。\nPDF / DOCX 默认连续滚动，使用“手动翻页”一次显示一页。'),
   }, { level: 6, mtime: new Date(2020, 0, 1), os: 0, attrs: 0 }));
   for (const file of ['pdf.mjs', 'pdf.worker.mjs']) await cp(path.join(vendor, 'legacy/build', file), path.join(output, 'vendor', file));

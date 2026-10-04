@@ -4,6 +4,10 @@ The extension bundles PDF.js (Apache-2.0), docx-preview (Apache-2.0),
 DOMPurify (Apache-2.0 OR MPL-2.0), JSZip (MIT OR GPL-3.0), pako (MIT/Zlib),
 and fflate 0.8.3 (MIT). Their license texts are in `vendor/`.
 
+PowerPoint parsing and static SVG rendering use @web-ppt/core 0.4.5
+(MIT, unStone/web-ppt). Its license is `vendor/web-ppt-core-LICENSE.txt`.
+The library and worker are bundled locally; no Office Online service is used.
+
 HEIC decoding uses heic-to 1.6.5 (LGPL-3.0), which includes libheif and
 libde265. The upstream license is `vendor/heic-to-LICENSE.txt`.
 `vendor/heic.worker.js` is a separately loaded, replaceable decoder file.

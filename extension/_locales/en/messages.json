@@ -3,7 +3,7 @@
     "message": "CourseLens — Fudan eLearning File Reader"
   },
   "extensionDescription": {
-    "message": "Read PDF, DOCX, HEIC, ZIP, images and text locally, with whole-page fit, continuous scrolling and course attachment modals."
+    "message": "Read PDF, DOCX, PPT/PPTX, HEIC, ZIP, images and text locally, with whole-page fit, continuous scrolling and course attachment modals."
   },
   "actionTitle": {
     "message": "CourseLens"

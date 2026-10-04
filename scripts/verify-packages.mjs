@@ -43,7 +43,7 @@ for (const browser of ['chromium']) {
   assert.match(manifest.content_security_policy.extension_pages, /(?:^|;)\s*worker-src 'self'\s*(?:;|$)/);
   const resources = ['viewer.html', 'viewer.mjs', 'viewer.css', 'reader.mjs', 'help.html', 'help.css',
     'popup.html', 'demo.pdf', 'demo.docx', 'demo.zip', 'pdf-reader.mjs', 'layout.mjs', 'heic.mjs', 'zip.mjs',
-    'other-viewer.mjs', 'vendor/docx.bundle.mjs', 'vendor/heic.worker.js', 'vendor/zip.worker.mjs',
+    'other-viewer.mjs', 'vendor/powerpoint.bundle.mjs', 'vendor/powerpoint.worker.mjs', 'vendor/web-ppt-core-LICENSE.txt', 'demo.pptx', 'vendor/docx.bundle.mjs', 'vendor/heic.worker.js', 'vendor/zip.worker.mjs',
     'vendor/heic-to-LICENSE.txt', 'vendor/fflate-LICENSE.txt', 'vendor/THIRD-PARTY-NOTICES.md',
     'vendor/heic-to-source.zip', 'vendor/libheif-1.23.5-source.tar.gz', 'vendor/libde265-1.0.16-source.tar.gz',
     'LICENSE.txt', 'vendor/PDFJS-LICENSE.txt', 'vendor/pdf.mjs',
@@ -71,6 +71,7 @@ for (const browser of ['chromium']) {
   const demoZip = unzipSync(demoBytes);
   assert.ok(Object.keys(demoZip).some((name) => name.endsWith('.pdf')));
   assert.ok(Object.keys(demoZip).some((name) => name.endsWith('.docx')));
+  assert.ok(Object.keys(demoZip).some((name) => name.endsWith('.pptx')));
   console.log(`${browser}: checksum, reproducibility, manifest and ${Object.keys(files).length} resources verified`);
 }
 if (sums.length === 2) {

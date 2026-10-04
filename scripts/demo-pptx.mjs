@@ -1,0 +1,18 @@
+import { zipSync, strToU8 } from 'fflate';
+export function createDemoPptx({ unsafeImage = false } = {}) {
+  const xml = 'http://schemas.openxmlformats.org', rel = `${xml}/package/2006/relationships`;
+  const shape = (id, x, y, w, h, text) => `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="文本框 ${id}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="zh-CN" sz="2800"><a:solidFill><a:srgbClr val="2456A6"/></a:solidFill></a:rPr><a:t>${text}</a:t></a:r></a:p></p:txBody></p:sp>`;
+  const slide = (text, body, image = false) => `<?xml version="1.0" encoding="UTF-8"?><p:sld xmlns:a="${xml}/drawingml/2006/main" xmlns:r="${xml}/officeDocument/2006/relationships" xmlns:p="${xml}/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${shape(2, 500000, 400000, 8000000, 1000000, text)}${shape(3, 500000, 1700000, 8000000, 1600000, body)}${image ? '<p:pic><p:nvPicPr><p:cNvPr id="4" name="示例图片"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rImage"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="7000000" y="3500000"/><a:ext cx="1000000" cy="1000000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>' : ''}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
+  const files = {
+    '[Content_Types].xml': `<Types xmlns="${xml}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>${[1, 2].map((n) => `<Override PartName="/ppt/slides/slide${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join('')}</Types>`,
+    '_rels/.rels': `<Relationships xmlns="${rel}"><Relationship Id="rPresentation" Type="${xml}/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>`,
+    'ppt/presentation.xml': `<p:presentation xmlns:p="${xml}/presentationml/2006/main" xmlns:r="${xml}/officeDocument/2006/relationships"><p:sldIdLst><p:sldId id="257" r:id="r2"/><p:sldId id="256" r:id="r1"/></p:sldIdLst><p:sldSz cx="9144000" cy="5143500" type="screen16x9"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>`,
+    'ppt/_rels/presentation.xml.rels': `<Relationships xmlns="${rel}">${[1, 2].map((n) => `<Relationship Id="r${n}" Type="${xml}/officeDocument/2006/relationships/slide" Target="slides/slide${n}.xml"/>`).join('')}</Relationships>`,
+    'ppt/slides/slide2.xml': slide('CourseLens · 课件阅读示例', '点击课件就能阅读。默认整页显示，也可以滚动或手动翻页。', true),
+    'ppt/slides/slide1.xml': slide('第二页：一起读课件', 'PDF、DOCX、PPT 和 PPTX 都可以在当前页面打开。'),
+    'ppt/slides/_rels/slide2.xml.rels': `<Relationships xmlns="${rel}"><Relationship Id="rImage" Type="${xml}/officeDocument/2006/relationships/image" Target="${unsafeImage ? 'https://example.invalid/track.png' : '../media/demo.png'}"${unsafeImage ? ' TargetMode="External"' : ''}/></Relationships>`,
+  };
+  const entries = Object.fromEntries(Object.entries(files).map(([name, value]) => [name, strToU8(value)]));
+  entries['ppt/media/demo.png'] = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jNmcAAAAASUVORK5CYII=', 'base64'));
+  return zipSync(entries, { level: 6, mtime: new Date(2020, 0, 1) });
+}

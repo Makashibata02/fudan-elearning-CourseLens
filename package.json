@@ -1,6 +1,6 @@
 {
   "name": "fudan-elearning-courselens",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -12,6 +12,7 @@
     "test:browser": "node scripts/smoke-extension.mjs"
   },
   "dependencies": {
+    "@web-ppt/core": "0.4.5",
     "docx-preview": "0.4.1",
     "dompurify": "3.4.16",
     "heic-to": "1.6.5",

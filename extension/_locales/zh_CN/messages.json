@@ -3,7 +3,7 @@
     "message": "CourseLens · 复旦 eLearning 文件阅读器"
   },
   "extensionDescription": {
-    "message": "面向学生与助教，在复旦 eLearning 阅读 PDF、DOCX、HEIC、ZIP、图片和文本；支持整页显示、连续滚动及课程附件弹窗。"
+    "message": "面向学生与助教，在复旦 eLearning 阅读 PDF、DOCX、PPT/PPTX、HEIC、ZIP、图片和文本；支持整页显示、连续滚动及课程附件弹窗。"
   },
   "actionTitle": {
     "message": "CourseLens"

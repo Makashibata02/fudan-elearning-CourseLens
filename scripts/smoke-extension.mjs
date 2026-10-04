@@ -7,6 +7,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
 import { createDemoPdf } from './demo-pdf.mjs';
 import { createDemoDocx } from './demo-docx.mjs';
+import { createDemoPptx } from './demo-pptx.mjs';
 import { zipSync, strToU8 } from 'fflate';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -18,13 +19,14 @@ assert.ok(['chromium', 'chrome', 'msedge'].includes(channel));
 const report = { platform: process.platform, channel, checks: [], passed: false };
 const downloads = [], pageErrors = [], unexpectedRequests = [];
 report.network = []; report.consoleErrors = [];
-const pdf = createDemoPdf(), docx = createDemoDocx();
+const pdf = createDemoPdf(), docx = createDemoDocx(), pptx = createDemoPptx();
+const ppt = await readFile(path.join(root, 'tests/fixtures/basic-test.ppt'));
 const heic = await readFile(path.join(root, 'tests/fixtures/with-alpha-512x512.heic'));
-const zip = zipSync({ '作业/答案.pdf': pdf, '作业/过程.docx': docx, '照片.heic': heic, '说明.txt': strToU8('ZIP 中文答案') });
-const files = new Map([['456', ['application/pdf', pdf]], ['457', ['application/octet-stream', docx]], ['458', ['image/heic', heic]], ['459', ['application/zip', zip]]]);
+const zip = zipSync({ '作业/答案.pdf': pdf, '作业/过程.docx': docx, '照片.heic': heic, '课件/现代课件.pptx': pptx, '课件/旧版课件.ppt': ppt, '说明.txt': strToU8('ZIP 中文答案') });
+const files = new Map([['456', ['application/pdf', pdf]], ['457', ['application/octet-stream', docx]], ['458', ['image/heic', heic]], ['459', ['application/zip', zip]], ['460', ['application/octet-stream', pptx]], ['461', ['application/vnd.ms-powerpoint', ppt]]]);
 const courseHTML = '<!doctype html><html lang="zh"><head><title>模拟课程</title><link rel="icon" href="data:,"></head><body><h1>模拟课程（无真实学生资料）</h1>' +
   '<a id="pdf" href="/files/456">演示文件.pdf</a> <a id="docx" href="/files/457">公式.docx</a> <a id="heic" href="/files/458">苹果照片.heic</a> <a id="zip" href="/files/459">作业.zip</a> ' +
-  '<a id="denied" href="/files/789">权限失效.pdf</a> <a class="download" href="/files/456/download" download>原下载</a></body></html>';
+  '<a id="pptx" href="/files/460">现代课件.pptx</a> <a id="ppt" href="/files/461">旧版课件.ppt</a> <a id="denied" href="/files/789">权限失效.pdf</a> <a class="download" href="/files/456/download" download>原下载</a></body></html>';
 const taHTML = '<!doctype html><html lang="zh"><head><title>模拟 SpeedGrader</title><link rel="icon" href="data:,"></head><body>' +
   '<button id="next-student-button">切换学生</button><div id="left_side" style="position:relative;width:760px;height:680px;float:left"></div><div id="right_side">' +
   '<div id="submission_files_list"><a class="display_name" href="/courses/123/assignments/456/submissions/10?download=456&inline=1">演示文件.pdf</a></div>' +
@@ -88,7 +90,9 @@ try {
       await diagnostic.goto(`${base}viewer.html?demo=1`); await rendered(diagnostic, 'PDF preview works');
       assert.equal(await diagnostic.locator('#page-count').textContent(), '/ 2'); assert.equal(await diagnostic.locator('#original').isVisible(), false);
       await diagnostic.goto(`${base}viewer.html?demo=zip`); await rendered(diagnostic);
-      assert.equal(await diagnostic.locator('#archive-entry option').count(), 3);
+      assert.equal(await diagnostic.locator('#archive-entry option').count(), 4);
+      await diagnostic.goto(`${base}viewer.html?demo=pptx`); await rendered(diagnostic);
+      assert.equal(await diagnostic.locator('.ppt-page').count(), 2); await diagnostic.locator('.ppt-page svg text').filter({ hasText: 'CourseLens' }).first().waitFor({ state: 'visible' });
     } finally { await context.setOffline(false); }
   });
   const course = await context.newPage(); await course.goto('https://elearning.fudan.edu.cn/courses/123/assignments/456');
@@ -127,10 +131,21 @@ try {
     assert.ok(await viewer.locator('#other-document canvas').evaluate((el) => el.width === 512 && el.height === 512));
     await course.screenshot({ path: path.join(output, 'heic-modal.png') });
   });
-  await check('ZIP previews PDF, DOCX, HEIC and Chinese text', async () => {
+  await check('PPTX and real binary PPT render in modals with manual slide navigation', async () => {
+    await course.locator('[data-action="close"]').click(); await course.locator('#pptx').click(); viewer = await panel(course); await rendered(viewer);
+    assert.equal(await viewer.locator('.ppt-page').count(), 2); assert.equal(await viewer.locator('#reading-mode').inputValue(), 'scroll');
+    assert.ok(await viewer.locator('.ppt-page').first().evaluate((el) => el.getBoundingClientRect().height < document.getElementById('workspace').clientHeight));
+    await viewer.locator('#reading-mode').selectOption('page'); await viewer.locator('#next').click();
+    assert.equal(await viewer.locator('.ppt-page:not([hidden])').count(), 1); await viewer.locator('.ppt-page:not([hidden]) svg text').filter({ hasText: '第二页' }).first().waitFor({ state: 'visible' });
+    await viewer.locator('#fit').click(); await viewer.locator('#fit-page').click(); await course.screenshot({ path: path.join(output, 'pptx-modal.png') });
+    await course.locator('[data-action="close"]').click(); await course.locator('#ppt').click(); viewer = await panel(course); await rendered(viewer);
+    await viewer.locator('.ppt-page svg text').filter({ hasText: 'This is a test title' }).first().waitFor({ state: 'visible' }); assert.equal(await viewer.locator('#badge').textContent(), 'PPT');
+    await course.screenshot({ path: path.join(output, 'ppt-modal.png') });
+  });
+  await check('ZIP previews PDF, DOCX, PPT, PPTX, HEIC and Chinese text', async () => {
     await course.locator('[data-action="close"]').click(); await course.locator('#zip').click(); viewer = await panel(course); await rendered(viewer);
-    assert.equal(await viewer.locator('#archive-entry option').count(), 4);
-    for (const [suffix, selector] of [['.pdf', '.paper canvas'], ['.docx', 'section.docx'], ['.heic', '#other-document canvas'], ['.txt', '#other-document pre']]) {
+    assert.equal(await viewer.locator('#archive-entry option').count(), 6);
+    for (const [suffix, selector] of [['.pdf', '.paper canvas'], ['.docx', 'section.docx'], ['.pptx', '.ppt-page svg'], ['.ppt', '.ppt-page svg'], ['.heic', '#other-document canvas'], ['.txt', '#other-document pre']]) {
       const value = await viewer.locator('#archive-entry option').evaluateAll((options, suffix) => options.find((option) => option.textContent.endsWith(suffix)).value, suffix);
       await viewer.locator('#archive-entry').selectOption(value); await rendered(viewer); await viewer.locator(selector).first().waitFor({ state: 'visible' });
       if (suffix === '.txt') assert.equal(await viewer.locator(selector).textContent(), 'ZIP 中文答案');
@@ -150,6 +165,12 @@ try {
     const next = await panel(ta); await rendered(next); await next.locator('section.docx').first().waitFor({ state: 'visible' });
     assert.equal(await ta.locator('#grade').inputValue(), '7'); assert.equal(await ta.locator('#comment').inputValue(), '尚未提交的评语');
     await ta.screenshot({ path: path.join(output, 'ta-reader.png') });
+    await ta.locator('#next-student-button').click();
+    await ta.evaluate(() => { history.replaceState(null, '', '?student_id=12'); const a = document.querySelector('.display_name'); a.href = '/courses/123/assignments/456/submissions/12?download=460&inline=1'; a.textContent = '下一位.pptx'; });
+    const slides = await panel(ta); await rendered(slides); await slides.locator('.ppt-page svg').first().waitFor({ state: 'visible' });
+    assert.equal(await slides.locator('.ppt-page').count(), 2); assert.equal(await ta.getByRole('dialog').count(), 0);
+    assert.equal(await ta.locator('#grade').inputValue(), '7'); assert.equal(await ta.locator('#comment').inputValue(), '尚未提交的评语');
+    await ta.screenshot({ path: path.join(output, 'ta-pptx.png') });
   });
   await check('403, cross-host authorization and rejection of untrusted sources', async () => {
     await course.locator('#denied').click(); const denied = await panel(course);

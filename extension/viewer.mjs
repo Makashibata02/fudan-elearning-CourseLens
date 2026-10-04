@@ -7,12 +7,12 @@ import { parseZip, readZipEntry } from './zip.mjs';
 const api = globalThis.browser || chrome;
 const $ = (id) => document.getElementById(id);
 const query = new URLSearchParams(location.search);
-const demoFormat = query.get('demo') === 'docx' ? 'docx' : query.get('demo') === 'zip' ? 'zip' : query.get('demo') === '1' ? 'pdf' : null;
+const demoFormat = ['docx', 'zip', 'pptx'].includes(query.get('demo')) ? query.get('demo') : query.get('demo') === '1' ? 'pdf' : null;
 const source = query.get('source'), original = query.get('original') || source;
 const embedded = window.top !== window;
 const formatOf = (name) => CanvasPreviewCatalog.formats.find((item) => item.pathPattern.test(name))?.id || 'unsupported';
 let fileName = demoFormat ? `演示文件.${demoFormat}` : FdPdf.filename(query.get('name'));
-let fileFormat = demoFormat || FdPdf.describe(source, fileName)?.format || 'unsupported';
+let fileFormat = (demoFormat === 'pptx' ? 'powerpoint' : demoFormat) || FdPdf.describe(source, fileName)?.format || 'unsupported';
 let name = fileName, format = fileFormat, localFile, archive, view, documentTask, workerPort, downloadURL;
 let loading = false, pendingScope, loadStage = '准备阅读器', page = 1, pageCount = 0, scale = 1;
 let zoomMode = 'page', readingMode = 'scroll';
@@ -28,7 +28,7 @@ function showStatus(title, detail, retry = false) {
 function updateControls() {
   $('title').textContent = archive ? `${archive.name} / ${name}` : name;
   document.title = `${name} · CourseLens`;
-  $('badge').textContent = ({ pdf: 'PDF', docx: 'DOCX', heic: 'HEIC', zip: 'ZIP', image: '图片', text: '文本', unsupported: '附件' })[format];
+  $('badge').textContent = ({ pdf: 'PDF', docx: 'DOCX', powerpoint: /\.ppt$/i.test(name) ? 'PPT' : 'PPTX', heic: 'HEIC', zip: 'ZIP', image: '图片', text: '文本', unsupported: '附件' })[format];
   const ready = Boolean(view && pageCount);
   $('pdf-controls').hidden = !ready || (pageCount < 2 && format !== 'pdf');
   $('page').disabled = !ready; $('page').value = page; $('page').max = pageCount || 1;
@@ -40,7 +40,8 @@ function updateControls() {
   $('fit').setAttribute('aria-pressed', String(zoomMode === 'width'));
   $('fit-page').setAttribute('aria-pressed', String(zoomMode === 'page'));
   $('zoom-label').textContent = `${Math.round(scale * 100)}%`;
-  $('format-note').hidden = format !== 'docx';
+  $('format-note').hidden = !['docx', 'powerpoint'].includes(format);
+  $('format-note').textContent = format === 'powerpoint' ? '课件按静态幻灯片阅读。字体、复杂图形和特殊公式可能与 PowerPoint 不同，动画、音视频及加密课件暂不支持。' : 'DOCX 复杂版式可能与 Word 不同；如公式或图表缺失，请下载核对。';
   $('archive-entry').disabled = loading; $('local-file').disabled = loading;
 }
 function onChange(state) { page = state.page; pageCount = state.pages; scale = state.scale; updateControls(); }

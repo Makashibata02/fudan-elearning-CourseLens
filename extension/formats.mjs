@@ -17,7 +17,10 @@ export function decodeText(bytes) {
 }
 /* Check central-directory expansion before the DOCX library inflates any entry. */
 export function validateDocx(bytes) {
-  const fail = (detail) => { throw new Error(detail || '文件不是有效 DOCX，请确认不是旧版 DOC 或加密文件。'); };
+  return validateOfficeZip(bytes, 'DOCX', 'word/document.xml');
+}
+export function validateOfficeZip(bytes, kind, requiredPart) {
+  const fail = (detail) => { throw new Error(detail || `文件不是有效 ${kind}，请确认文件完整且未加密。`); };
   if (bytes.length < 22) fail();
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let end = -1;
@@ -27,22 +30,22 @@ export function validateDocx(bytes) {
   if (end < 0 || view.getUint16(end + 4, true) || view.getUint16(end + 6, true)) fail();
   const count = view.getUint16(end + 10, true), size = view.getUint32(end + 12, true);
   let pos = view.getUint32(end + 16, true), total = 0;
-  if (count > 4096 || count === 65535 || size === 0xffffffff || pos + size !== end) fail('DOCX 压缩结构不受支持或条目过多，请下载后阅读。');
+  if (count > 4096 || count === 65535 || size === 0xffffffff || pos + size !== end) fail(`${kind} 压缩结构不受支持或条目过多，请下载后阅读。`);
   const names = new Set();
   for (let n = 0; n < count; n++) {
     if (pos + 46 > end || view.getUint32(pos, true) !== 0x02014b50) fail();
     const flags = view.getUint16(pos + 8, true), method = view.getUint16(pos + 10, true);
     const expanded = view.getUint32(pos + 24, true), len = view.getUint16(pos + 28, true);
     const step = 46 + len + view.getUint16(pos + 30, true) + view.getUint16(pos + 32, true);
-    if (pos + step > end || flags & 1 || ![0, 8].includes(method)) fail('不支持加密或特殊压缩的 DOCX。');
+    if (pos + step > end || flags & 1 || ![0, 8].includes(method)) fail(`不支持加密或特殊压缩的 ${kind}。`);
     const local = view.getUint32(pos + 42, true);
     if (local + 30 > end || view.getUint32(local, true) !== 0x04034b50 || view.getUint32(local + 22, true) > 32 * 1024 * 1024) fail();
     total += expanded;
-    if (expanded > 32 * 1024 * 1024 || total > 200 * 1024 * 1024) fail('DOCX 解压后内容过大，请下载后阅读。');
+    if (expanded > 32 * 1024 * 1024 || total > 200 * 1024 * 1024) fail(`${kind} 解压后内容过大，请下载后阅读。`);
     const name = new TextDecoder().decode(bytes.subarray(pos + 46, pos + 46 + len));
     if (names.has(name) || name.includes('..') || name.startsWith('/') || name.includes('\\')) fail();
     names.add(name); pos += step;
   }
-  if (pos !== end || !names.has('[Content_Types].xml') || !names.has('word/document.xml') || [...names].some((name) => /vbaProject/i.test(name))) fail();
+  if (pos !== end || !names.has('[Content_Types].xml') || !names.has(requiredPart) || [...names].some((name) => /vbaProject/i.test(name))) fail();
   return { entries: count, expandedBytes: total };
 }

@@ -3,5 +3,5 @@ Branch: feature/standalone-extension
 Commit: 5cc33865a169cd0945d8fee9f0648f30bc9dc16c
 Retrieved: 2026-10-04
 Independent repository: https://github.com/Makashibata02/fudan-elearning-CourseLens
-Local derivative: fudan-elearning-courselens 2.1.1
+Local derivative: fudan-elearning-courselens 2.2.0
 Upstream history, MIT license and original author copyright are retained.

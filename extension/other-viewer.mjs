@@ -3,7 +3,7 @@ import { renderDocx } from './vendor/docx.bundle.mjs';
 import { decodeHeic } from './heic.mjs';
 import { fitScale, viewportSize, visiblePage, scrollToPage } from './layout.mjs';
 
-export async function renderOther(bytes, format, target, { root, api, onChange = () => {} } = {}) {
+export async function renderOther(bytes, format, target, { root, api, onChange = () => {}, powerpointOptions = {} } = {}) {
   target.replaceChildren(); target.hidden = false; target.style.zoom = '';
   const content = document.createElement('div'); target.append(content);
   let resource, pages = [], page = 1, scale = 1, readingMode = 'scroll', zoomMode = 'page';
@@ -12,6 +12,9 @@ export async function renderOther(bytes, format, target, { root, api, onChange =
     pages = [...shadow.querySelectorAll('section.docx')];
     const wrapper = shadow.querySelector('.docx-wrapper');
     if (wrapper) wrapper.style.setProperty('padding', '0', 'important');
+  } else if (format === 'powerpoint') {
+    const { renderPowerPoint } = await import('./vendor/powerpoint.bundle.mjs');
+    pages = await renderPowerPoint(bytes, content, { workerURL: api?.runtime.getURL('vendor/powerpoint.worker.mjs'), ...powerpointOptions });
   } else if (format === 'image') {
     const img = document.createElement('img'); img.alt = '提交的作业图片';
     resource = URL.createObjectURL(new Blob([bytes], { type: imageMime(bytes) })); img.src = resource;
@@ -27,7 +30,7 @@ export async function renderOther(bytes, format, target, { root, api, onChange =
     const pre = document.createElement('pre'); pre.textContent = decodeText(bytes); content.append(pre); pages = [pre];
   }
   if (!pages.length) throw new Error('文件中没有可显示的页面。');
-  const dimensions = pages.map((el) => ({ width: el.naturalWidth || el.width || el.getBoundingClientRect().width || 794, height: el.naturalHeight || el.height || el.getBoundingClientRect().height || 1123 }));
+  const dimensions = pages.map((el) => ({ width: el.naturalWidth || el.width || (format === 'powerpoint' ? parseFloat(el.style.width) : 0) || el.getBoundingClientRect().width || 794, height: el.naturalHeight || el.height || (format === 'powerpoint' ? parseFloat(el.style.height) : 0) || el.getBoundingClientRect().height || 1123 }));
   const notify = () => onChange({ page, pages: pages.length, scale });
   const onScroll = () => { if (readingMode === 'scroll' && pages.length > 1) { page = visiblePage(root, pages); notify(); } };
   root.addEventListener('scroll', onScroll, { passive: true });
