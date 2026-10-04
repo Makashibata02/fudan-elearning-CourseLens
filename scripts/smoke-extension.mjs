@@ -47,6 +47,14 @@ async function panel(page) {
   const iframe = page.locator('#fdta-preview iframe'); await iframe.waitFor({ state: 'visible' });
   return (await iframe.elementHandle()).contentFrame();
 }
+async function screenshotRegion(page, locator, file) {
+  // Locator.screenshot scrolls its target into view. Keep fixed Shadow DOM/OOPIF
+  // geometry intact in headed Edge by clipping the already visible page instead.
+  const clip = await locator.boundingBox(), viewport = page.viewportSize();
+  assert.ok(clip && clip.x >= 0 && clip.y >= 0 && clip.width > 0 && clip.height > 0);
+  assert.ok(clip.x + clip.width <= viewport.width + 1 && clip.y + clip.height <= viewport.height + 1);
+  await page.screenshot({ path: path.join(output, file), clip });
+}
 async function toggleMenu(viewer, name = 'more') {
   // Headed Edge can acknowledge an OOPIF click before its surface is ready after
   // tab/layout changes. Focus the page and let two paint frames settle first.
@@ -162,8 +170,8 @@ try {
       input.value = '1'; input.dispatchEvent(new Event('input')); count.textContent = '/ 2'; return results.every(Boolean);
     });
     assert.ok(centered, 'Current page and total pages must be centered as one unit for different digit lengths');
-    await course.locator('#fdta-preview section').screenshot({ path: path.join(output, 'page-number-alignment.png') });
-    await viewer.locator('#pdf-controls').screenshot({ path: path.join(output, 'page-controls-centered.png') });
+    await screenshotRegion(course, course.locator('#fdta-preview section'), 'page-number-alignment.png');
+    await screenshotRegion(course, viewer.locator('#pdf-controls'), 'page-controls-centered.png');
   });
   await check('preview fullscreen expands in place, restores with button or Escape, and does not reload the attachment', async () => {
     const pages = context.pages().length, frame = viewer, requests = report.network.filter((item) => item.event === 'request' && item.type === 'fetch').length;
@@ -241,7 +249,7 @@ try {
     await viewer.locator('#previous').click();
     await toggleMenu(viewer); await viewer.locator('#reading-mode').selectOption('scroll'); await toggleMenu(viewer);
     await viewer.locator('#fit-mode').selectOption('width');
-    await course.locator('#fdta-preview section').screenshot({ path: path.join(output, 'docx-modal.png') });
+    await screenshotRegion(course, course.locator('#fdta-preview section'), 'docx-modal.png');
     await course.locator('[data-action="close"]').click(); await course.locator('#heic').click(); viewer = await panel(course); await rendered(viewer);
     assert.ok(await viewer.locator('#other-document canvas').evaluate((el) => el.width === 512 && el.height === 512));
     await course.screenshot({ path: path.join(output, 'heic-modal.png') });
@@ -317,7 +325,7 @@ try {
     const selectedText = await viewer.locator('#archive-entry').inputValue();
     const selectedPdf = await viewer.locator('#archive-entry option').evaluateAll((options) => options.find((option) => option.textContent.endsWith('.pdf')).value);
     await viewer.locator('#archive-entry').selectOption(selectedPdf); await rendered(viewer, 'PDF preview works');
-    await course.locator('#fdta-preview section').screenshot({ path: path.join(output, 'zip-modal.png') });
+    await screenshotRegion(course, course.locator('#fdta-preview section'), 'zip-modal.png');
     await viewer.locator('#archive-entry').selectOption(selectedText); await rendered(viewer);
     const currentPending = course.waitForEvent('download'); await viewer.locator('#download').click(); const currentFile = await currentPending;
     const currentStream = await currentFile.createReadStream(), currentChunks = []; for await (const chunk of currentStream) currentChunks.push(chunk); assert.deepEqual(Buffer.concat(currentChunks), Buffer.from(strToU8('ZIP 中文答案')));
