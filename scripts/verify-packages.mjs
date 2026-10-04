@@ -9,9 +9,9 @@ import { createDemoPdf } from './demo-pdf.mjs';
 const root = new URL('../', import.meta.url);
 const pkg = JSON.parse(await readFile(new URL('package.json', root)));
 const sums = (await readFile(new URL('dist/SHA256SUMS.txt', root), 'utf8')).trim().split('\n');
-assert.equal(sums.length, 2);
-for (const browser of ['chromium', 'firefox']) {
-  const name = `fudan-elearning-pdf-preview-${browser}-${pkg.version}.zip`;
+assert.ok(sums.length >= 1 && sums.length <= 2);
+for (const browser of ['chromium']) {
+  const name = `${pkg.name}-${browser}-${pkg.version}.zip`;
   const bytes = await readFile(new URL(`dist/${name}`, root));
   assert.ok(sums.includes(`${createHash('sha256').update(bytes).digest('hex')}  ${name}`), 'Checksum mismatch');
   // Independently repackage to catch missing files, changed bytes and unstable metadata.
@@ -40,8 +40,13 @@ for (const browser of ['chromium', 'firefox']) {
   assert.deepEqual(manifest.host_permissions, ['https://elearning.fudan.edu.cn/*']);
   assert.deepEqual(manifest.optional_host_permissions, ['https://*/*']);
   assert.ok(!manifest.content_security_policy.extension_pages.includes("'unsafe-eval'"));
+  assert.match(manifest.content_security_policy.extension_pages, /(?:^|;)\s*worker-src 'self'\s*(?:;|$)/);
   const resources = ['viewer.html', 'viewer.mjs', 'viewer.css', 'reader.mjs', 'help.html', 'help.css',
-    'popup.html', 'demo.pdf', 'LICENSE.txt', 'vendor/PDFJS-LICENSE.txt', 'vendor/pdf.mjs',
+    'popup.html', 'demo.pdf', 'demo.docx', 'demo.zip', 'pdf-reader.mjs', 'layout.mjs', 'heic.mjs', 'zip.mjs',
+    'other-viewer.mjs', 'vendor/docx.bundle.mjs', 'vendor/heic.worker.js', 'vendor/zip.worker.mjs',
+    'vendor/heic-to-LICENSE.txt', 'vendor/fflate-LICENSE.txt', 'vendor/THIRD-PARTY-NOTICES.md',
+    'vendor/heic-to-source.zip', 'vendor/libheif-1.23.5-source.tar.gz', 'vendor/libde265-1.0.16-source.tar.gz',
+    'LICENSE.txt', 'vendor/PDFJS-LICENSE.txt', 'vendor/pdf.mjs',
     'vendor/pdf.worker.mjs', 'vendor/pdf_viewer.css', ...Object.values(manifest.icons),
     ...manifest.content_scripts.flatMap((script) => script.js),
     ...(manifest.background.scripts || [manifest.background.service_worker])];
@@ -56,7 +61,21 @@ for (const browser of ['chromium', 'firefox']) {
     // Finder/iCloud conflict copies use a space and numeric suffix, including on directories.
     assert.ok(!name.split('/').some((part) => / \d+(?=\.|$)/.test(part)), `Duplicate copy: ${name}`);
   }
-  if (browser === 'firefox') assert.equal(manifest.browser_specific_settings.gecko.id, 'fudan-elearning-pdf-preview@sjy0630');
-  else assert.equal(manifest.background.service_worker, 'background.js');
+  assert.equal(manifest.background.service_worker, 'background.js');
+  assert.equal(manifest.minimum_chrome_version, '120');
+  assert.equal(manifest.browser_specific_settings, undefined);
+  const demoZip = unzipSync(files['demo.zip']);
+  assert.ok(Object.keys(demoZip).some((name) => name.endsWith('.pdf')));
+  assert.ok(Object.keys(demoZip).some((name) => name.endsWith('.docx')));
   console.log(`${browser}: checksum, reproducibility, manifest and ${Object.keys(files).length} resources verified`);
+}
+if (sums.length === 2) {
+  const name = `${pkg.name}-source-${pkg.version}.zip`;
+  const bytes = await readFile(new URL(`dist/${name}`, root));
+  assert.ok(sums.includes(`${createHash('sha256').update(bytes).digest('hex')}  ${name}`));
+  const files = unzipSync(bytes);
+  for (const name of ['package.json', 'package-lock.json', 'extension/viewer.mjs', 'tests/reader-modes.test.cjs', 'THIRD-PARTY-NOTICES.md', 'SOURCE-STATE.json']) assert.ok(files[name]?.length, name);
+  assert.equal(JSON.parse(Buffer.from(files['package.json'])).version, pkg.version);
+  assert.ok(!Object.keys(files).some((name) => /^(?:\.git|dist|node_modules|output)\//.test(name)));
+  console.log('Complete working-tree source ZIP and checksum verified');
 }

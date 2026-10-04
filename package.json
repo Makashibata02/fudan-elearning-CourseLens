@@ -1,22 +1,27 @@
 {
-  "name": "fudan-elearning-pdf-preview",
-  "version": "1.1.1",
+  "name": "fudan-elearning-courselens",
+  "version": "2.1.1",
   "private": true,
   "license": "MIT",
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test tests/*.test.cjs",
-    "check": "node --check extension/core.js && node --check extension/content.js && node --check extension/background.js && node --check extension/viewer.mjs && node --check scripts/smoke-extension.mjs",
+    "check": "node scripts/check.mjs",
     "verify:packages": "node scripts/verify-packages.mjs",
-    "test:browser": "node scripts/smoke-extension.mjs",
-    "test:firefox": "node scripts/smoke-firefox.mjs"
+    "package:source": "node scripts/package-source.mjs",
+    "test:browser": "node scripts/smoke-extension.mjs"
   },
   "dependencies": {
+    "docx-preview": "0.4.1",
+    "dompurify": "3.4.16",
+    "heic-to": "1.6.5",
     "pdfjs-dist": "6.3.289"
   },
   "devDependencies": {
+    "acorn": "8.15.0",
+    "esbuild": "0.28.2",
     "fflate": "0.8.3",
-    "playwright": "1.63.0",
-    "selenium-webdriver": "4.49.0"
+    "jsdom": "30.1.1",
+    "playwright": "1.63.0"
   }
 }

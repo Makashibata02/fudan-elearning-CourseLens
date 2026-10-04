@@ -27,4 +27,31 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .status p { color: #5a687e; white-space: pre-line; overflow-wrap: anywhere; }
 footer { padding: 14px; text-align: center; color: #66758b; font-size: 12px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#format-note, #local-picker { background:#edf4ff;color:#244f8a;padding:9px 16px;font-size:12px;display:flex;align-items:center;gap:12px; }
+#other-document { width:max-content;min-width:0;max-width:none;margin:0 auto; }
+#other-document pre { background:#fff;border:1px solid #d9e0e9;border-radius:8px;padding:24px;white-space:pre-wrap;overflow-wrap:anywhere;width:min(860px, calc(100vw - 72px));font-family:Consolas,monospace;line-height:1.7;margin:0; }
+#other-document img { display:block;box-shadow:0 3px 20px #1b345025; }
 @media (max-width: 760px) { .toolbar { padding: 10px; gap: 10px; } .brand { flex-basis: 100%; } .controls { flex-wrap: wrap; } #workspace { padding: 12px; } }
+
+/* The workspace, not the browser document, owns scrolling. Fit uses its exact viewport. */
+html,body{height:100%;overflow:hidden}
+body{display:flex;flex-direction:column;height:100vh}
+.toolbar{position:relative;flex:none;padding:8px 12px;gap:10px}
+.brand{min-width:120px}
+.controls{flex-wrap:wrap}
+#workspace{position:relative;flex:1;min-height:0;padding:12px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+footer{flex:none;padding:5px;font-size:11px}
+#demo-note,#format-note,#local-picker,#archive-panel{flex:none;padding:6px 12px}
+#archive-panel{display:flex;align-items:center;gap:8px;background:#f5f8fc;border-bottom:1px solid #d4dce7;font-size:12px}
+#archive-entry{min-width:80px;flex:1;max-width:75%}
+select{font:inherit;padding:6px;border:1px solid #d4dce7;border-radius:6px;background:#fff;color:#233047}
+button[aria-pressed="true"]{background:#e8f1ff;border-color:#2456a6;color:#2456a6}
+#pdf-document{width:100%}
+.pdf-page{margin:0 auto 12px;display:flex;flex-direction:column;align-items:center}
+.pdf-page-label{font-size:12px;color:#63748a;padding:2px 0 6px;line-height:16px}
+.paper{position:relative;background:#fff;box-shadow:0 3px 18px #17305025;flex:none}
+.paper canvas{display:block}
+#other-document{margin:0 auto;max-width:none}
+#other-document canvas,#other-document img{display:block;max-width:none;box-shadow:0 3px 18px #17305025}
+.status{position:absolute;z-index:20;top:24px;left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 32px));margin:0;padding:24px}
+@media(max-width:640px){.toolbar{gap:7px;padding:6px}.brand{flex-basis:100%}.actions{flex-wrap:wrap}.controls{gap:5px}button,.button,select{padding:5px 7px}#workspace{padding:8px}.divider{display:none}#archive-panel{flex-wrap:wrap}#archive-entry{max-width:100%}}

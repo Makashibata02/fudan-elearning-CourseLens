@@ -3,3 +3,9 @@ dist/
 output/
 .playwright-cli/
 .DS_Store
+.env
+.env.*
+*.log
+*.pem
+*.key
+backups/

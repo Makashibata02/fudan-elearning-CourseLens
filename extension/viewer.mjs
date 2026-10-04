@@ -1,166 +1,178 @@
 import * as pdfjs from './vendor/pdf.mjs';
-import { HostPermissionError, readPdf } from './reader.mjs';
+import { HostPermissionError, readFile } from './reader.mjs';
+import { renderOther } from './other-viewer.mjs';
+import { PdfReader } from './pdf-reader.mjs';
+import { parseZip, readZipEntry } from './zip.mjs';
 
 const api = globalThis.browser || chrome;
-pdfjs.GlobalWorkerOptions.workerSrc = api.runtime.getURL('vendor/pdf.worker.mjs');
 const $ = (id) => document.getElementById(id);
 const query = new URLSearchParams(location.search);
-const isDemo = query.get('demo') === '1';
-const source = query.get('source');
-const original = query.get('original') || source;
-const name = isDemo ? '演示文件.pdf' : FdPdf.filename(query.get('name'));
-let documentTask, pdf, pageNumber = 1, scale = 1, fitWidth = true, renderTask, textTask, generation = 0, objectUrl, pendingScope;
-
-$('title').textContent = name;
-document.title = `${name} · eLearning PDF 预览`;
-if (!isDemo && FdPdf.fileUrl(original)) { $('original').href = original; $('original').hidden = false; }
-$('demo-note').hidden = !isDemo;
+const demoFormat = query.get('demo') === 'docx' ? 'docx' : query.get('demo') === 'zip' ? 'zip' : query.get('demo') === '1' ? 'pdf' : null;
+const source = query.get('source'), original = query.get('original') || source;
+const embedded = window.top !== window;
+const formatOf = (name) => CanvasPreviewCatalog.formats.find((item) => item.pathPattern.test(name))?.id || 'unsupported';
+let fileName = demoFormat ? `演示文件.${demoFormat}` : FdPdf.filename(query.get('name'));
+let fileFormat = demoFormat || FdPdf.describe(source, fileName)?.format || 'unsupported';
+let name = fileName, format = fileFormat, localFile, archive, view, documentTask, workerPort, downloadURL;
+let loading = false, pendingScope, loadStage = '准备阅读器', page = 1, pageCount = 0, scale = 1;
+let zoomMode = 'page', readingMode = 'scroll';
+pdfjs.GlobalWorkerOptions.workerSrc = api.runtime.getURL('vendor/pdf.worker.mjs');
+if (embedded) { $('standalone').href = location.href; $('standalone').hidden = false; }
+$('local-picker').hidden = embedded || Boolean(source) || Boolean(demoFormat);
+$('demo-note').hidden = !demoFormat;
+if (!demoFormat && FdPdf.fileUrl(original)) { $('original').href = original; $('original').hidden = false; }
 
 function showStatus(title, detail, retry = false) {
-  $('status').hidden = false;
-  $('status-title').textContent = title;
-  $('status-detail').textContent = detail;
-  $('retry').hidden = !retry;
+  $('status').hidden = false; $('status-title').textContent = title; $('status-detail').textContent = detail; $('retry').hidden = !retry;
 }
-
 function updateControls() {
-  const ready = Boolean(pdf);
-  for (const id of ['page', 'zoom-in', 'zoom-out', 'fit']) $(id).disabled = !ready;
-  $('previous').disabled = !ready || pageNumber <= 1;
-  $('next').disabled = !ready || pageNumber >= pdf.numPages;
-  $('page').value = pageNumber;
-  $('page').max = pdf?.numPages || 1;
-  $('page-count').textContent = `/ ${pdf?.numPages || '—'}`;
-}
-
-async function renderPage() {
-  if (!pdf) return;
-  const token = ++generation;
-  const previousTask = renderTask;
-  previousTask?.cancel();
-  textTask?.cancel();
-  try { await previousTask?.promise; } catch { /* cancellation */ }
-  const page = await pdf.getPage(pageNumber);
-  if (token !== generation) return;
-  const natural = page.getViewport({ scale: 1 });
-  if (fitWidth) scale = Math.min(2, Math.max(.25, ($('workspace').clientWidth - 64) / natural.width));
-  const viewport = page.getViewport({ scale });
-  const pixelRatio = Math.min(devicePixelRatio || 1, 2, Math.sqrt(16000000 / (viewport.width * viewport.height)));
-  const canvas = $('canvas');
-  canvas.width = Math.floor(viewport.width * pixelRatio);
-  canvas.height = Math.floor(viewport.height * pixelRatio);
-  canvas.style.width = `${viewport.width}px`;
-  canvas.style.height = `${viewport.height}px`;
-  canvas.setAttribute('aria-label', `${name}，第 ${pageNumber} 页，共 ${pdf.numPages} 页`);
-  $('paper').style.width = `${viewport.width}px`;
-  $('paper').style.height = `${viewport.height}px`;
-  $('paper').style.setProperty('--scale-factor', scale);
-  $('paper').style.setProperty('--total-scale-factor', scale);
-  $('paper').hidden = false;
-  $('text-layer').replaceChildren();
+  $('title').textContent = archive ? `${archive.name} / ${name}` : name;
+  document.title = `${name} · CourseLens`;
+  $('badge').textContent = ({ pdf: 'PDF', docx: 'DOCX', heic: 'HEIC', zip: 'ZIP', image: '图片', text: '文本', unsupported: '附件' })[format];
+  const ready = Boolean(view && pageCount);
+  $('pdf-controls').hidden = !ready || (pageCount < 2 && format !== 'pdf');
+  $('page').disabled = !ready; $('page').value = page; $('page').max = pageCount || 1;
+  $('page-count').textContent = `/ ${pageCount || '—'}`;
+  $('previous').disabled = !ready || page <= 1; $('next').disabled = !ready || page >= pageCount;
+  for (const id of ['zoom-in', 'zoom-out', 'fit', 'fit-page']) $(id).disabled = !ready;
+  $('reading-mode').disabled = !ready || pageCount < 2;
+  $('reading-mode').value = readingMode;
+  $('fit').setAttribute('aria-pressed', String(zoomMode === 'width'));
+  $('fit-page').setAttribute('aria-pressed', String(zoomMode === 'page'));
   $('zoom-label').textContent = `${Math.round(scale * 100)}%`;
-  updateControls();
-  renderTask = page.render({ canvasContext: canvas.getContext('2d'), viewport, transform: [pixelRatio, 0, 0, pixelRatio, 0, 0] });
-  try {
-    await renderTask.promise;
-    if (token !== generation) return;
-    $('status').hidden = true;
-    const text = await page.getTextContent();
-    if (token !== generation) return;
-    textTask = new pdfjs.TextLayer({ textContentSource: text, container: $('text-layer'), viewport });
-    await textTask.render();
-  } catch (error) {
-    if (token === generation && error.name !== 'RenderingCancelledException' && error.name !== 'AbortException') throw error;
+  $('format-note').hidden = format !== 'docx';
+  $('archive-entry').disabled = loading; $('local-file').disabled = loading;
+}
+function onChange(state) { page = state.page; pageCount = state.pages; scale = state.scale; updateControls(); }
+function configure() {
+  if (!view) return;
+  try { view.configure({ zoomMode, readingMode, scale }); }
+  catch (error) { showError(error); }
+}
+function showError(error) {
+  if (error instanceof HostPermissionError) {
+    pendingScope = error.scope; $('grant').hidden = embedded;
+    showStatus('需要允许读取文件服务器', `${new URL(error.scope).hostname}\n${embedded ? '点击“独立阅读 / 授权”，在新标签页允许此服务器，再返回重新打开附件。' : '点击下方按钮，仅允许此服务器；也可以打开原文件。'}`);
+  } else {
+    showStatus('暂时无法预览', `阶段：${loadStage}\n${error?.message || String(error || '文件无法读取。')}`, true);
   }
 }
-
-function renderSafely() {
-  renderPage().catch(() => showStatus('这一页暂时无法显示', '可以尝试翻页、重新打开文件，或下载后阅读。', true));
+async function clearDocument() {
+  view?.destroy(); view = null; pageCount = 0;
+  await documentTask?.destroy(); documentTask = null;
+  workerPort?.terminate(); workerPort = null; pdfjs.GlobalWorkerOptions.workerPort = null;
+  if (downloadURL) URL.revokeObjectURL(downloadURL); downloadURL = null;
+  $('download').hidden = true; $('pdf-document').hidden = true; $('other-document').hidden = true;
 }
-
-async function load() {
-  $('grant').hidden = true;
-  pendingScope = null;
-  $('paper').hidden = true;
-  $('download').hidden = true;
-  pdf = null;
-  generation++;
-  renderTask?.cancel(); textTask?.cancel();
-  updateControls();
-  showStatus('正在读取 PDF…', isDemo ? '演示文件已随扩展安装，无需登录或联网。' : '文件只在你的浏览器中处理。');
-  if (!isDemo && !FdPdf.fileUrl(source)) {
-    showStatus('请从 eLearning 打开 PDF', '回到作业页面，点击 PDF 文件名即可预览。');
+function clearArchive() {
+  if (archive?.url) URL.revokeObjectURL(archive.url);
+  archive = null; $('archive-panel').hidden = true; $('archive-entry').replaceChildren();
+}
+async function display(bytes, nextName, nextFormat) {
+  await clearDocument(); name = nextName; format = nextFormat; page = 1; scale = 1; zoomMode = 'page';
+  updateControls(); $('workspace').scrollTop = 0;
+  const mime = format === 'pdf' ? 'application/pdf' : format === 'heic' ? 'image/heic' : 'application/octet-stream';
+  downloadURL = URL.createObjectURL(new Blob([bytes], { type: mime }));
+  $('download').href = downloadURL; $('download').download = name; $('download').hidden = false;
+  if (format === 'unsupported' || format === 'zip') {
+    showStatus('此文件暂不支持直接预览', format === 'zip' ? '嵌套 ZIP 请下载后解压。' : /\.doc$/i.test(name) ? '旧版 DOC 请另存为 DOCX 或 PDF。' : '可以下载此文件，用对应的软件阅读。');
     return;
   }
-  try {
-    await documentTask?.destroy();
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    let bytes;
-    if (isDemo) {
-      // Fixed bundled resource only. A query parameter cannot select another URL.
-      const response = await fetch(api.runtime.getURL('demo.pdf'));
-      if (!response.ok) throw new Error('内置演示文件缺失，请重新安装扩展后重试。');
-      bytes = new Uint8Array(await response.arrayBuffer());
-    } else bytes = await readPdf(source, { api });
-    objectUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-    $('download').href = objectUrl;
-    $('download').download = name;
-    $('download').hidden = false;
-    showStatus('正在打开 PDF…', '正在准备页面。');
-    documentTask = pdfjs.getDocument({
-      data: bytes,
-      cMapUrl: api.runtime.getURL('vendor/cmaps/'), cMapPacked: true,
-      standardFontDataUrl: api.runtime.getURL('vendor/standard_fonts/'),
-      wasmUrl: api.runtime.getURL('vendor/wasm/'), isEvalSupported: false,
-    });
+  loadStage = format === 'pdf' ? '启动 PDF 阅读器' : format === 'heic' ? '解码 HEIC 照片' : '解析文件';
+  showStatus(format === 'heic' ? '正在解码苹果照片…' : '正在准备预览…', '文件在浏览器本地处理。');
+  if (format === 'pdf') {
+    workerPort = new Worker(api.runtime.getURL('vendor/pdf.worker.mjs'), { type: 'module' });
+    pdfjs.GlobalWorkerOptions.workerPort = workerPort;
+    documentTask = pdfjs.getDocument({ data: bytes, cMapUrl: api.runtime.getURL('vendor/cmaps/'), cMapPacked: true, standardFontDataUrl: api.runtime.getURL('vendor/standard_fonts/'), wasmUrl: api.runtime.getURL('vendor/wasm/'), isEvalSupported: false });
     documentTask.onPassword = (updatePassword) => {
       const password = window.prompt('此 PDF 已加密，请输入文件密码（不会保存）：');
-      if (password === null) {
-        documentTask.destroy();
-        showStatus('已取消打开加密文件', '点击重试可重新输入密码。', true);
-      } else updatePassword(password);
+      if (password === null) { documentTask.destroy(); showStatus('已取消打开加密文件', '点击重试可重新打开。', true); }
+      else updatePassword(password);
     };
-    pdf = await documentTask.promise;
-    pageNumber = 1;
-    await renderPage();
-  } catch (error) {
-    if (error instanceof HostPermissionError) {
-      pendingScope = error.scope;
-      $('grant').hidden = false;
-      showStatus('需要允许读取文件服务器', `${new URL(error.scope).hostname}\n学校将这个文件转到上述服务器。点击下方按钮，仅允许此服务器；也可以打开原文件。`);
-    } else {
-      showStatus('暂时无法预览', error instanceof TypeError ? (isDemo ? '内置演示文件无法读取，请重新安装扩展后重试。' : '无法连接文件服务器。请确认已登录 eLearning，并检查网络。') : error.message || '文件无法读取。', true);
-    }
+    const pdf = await documentTask.promise;
+    loadStage = '绘制 PDF 页面';
+    view = new PdfReader({ pdfjs, root: $('workspace'), target: $('pdf-document'), name, onChange, onError: showError });
+    view.readingMode = readingMode; view.zoomMode = zoomMode;
+    await view.open(pdf);
+  } else {
+    view = await renderOther(bytes, format, $('other-document'), { root: $('workspace'), api, onChange });
+    configure();
   }
+  $('status').hidden = true; updateControls();
 }
-
-$('grant').addEventListener('click', () => {
-  if (!pendingScope) return;
-  api.permissions.request({ origins: [pendingScope] }).then((granted) => {
-    if (granted) load();
-    else showStatus('尚未获得文件服务器权限', '可以再次点击授权，或使用右上角“打开原文件”。');
-  }).catch(() => showStatus('权限申请未完成', '请重试，或使用右上角“打开原文件”。'));
+async function openArchiveEntry(index) {
+  const entry = archive.entries[index];
+  if (!entry) return;
+  await clearDocument(); name = entry.name; format = formatOf(entry.name); updateControls();
+  loadStage = '解压 ZIP 内文件'; showStatus('正在读取 ZIP 内文件…', entry.name);
+  const bytes = await readZipEntry(archive.bytes, entry, { workerURL: api.runtime.getURL('vendor/zip.worker.mjs') });
+  await display(bytes, entry.name, formatOf(entry.name));
+}
+async function load() {
+  if (loading) return;
+  loading = true; $('grant').hidden = true; pendingScope = null; updateControls();
+  try {
+    await clearDocument(); clearArchive(); name = fileName; format = fileFormat; updateControls();
+    if (!demoFormat && !localFile && !FdPdf.fileUrl(source)) { showStatus('打开作业文件', '回到 eLearning 点击文件名，或在这里打开本地文件。'); return; }
+    loadStage = '读取附件'; showStatus('正在读取文件…', '文件在浏览器本地处理。');
+    let bytes;
+    if (localFile) {
+      if (localFile.size > 100 * 1024 * 1024) throw new Error('文件超过 100 MiB，请使用本地软件阅读。');
+      bytes = new Uint8Array(await localFile.arrayBuffer());
+    } else if (demoFormat) {
+      const response = await fetch(api.runtime.getURL(`demo.${demoFormat}`));
+      if (!response.ok) throw new Error('内置示例缺失，请重新加载扩展。');
+      bytes = new Uint8Array(await response.arrayBuffer());
+    } else bytes = await readFile(source, { api, format: fileFormat });
+    if (fileFormat !== 'zip') await display(bytes, fileName, fileFormat);
+    else {
+      loadStage = '读取 ZIP 文件列表'; const entries = parseZip(bytes);
+      archive = { bytes, entries, name: fileName, url: URL.createObjectURL(new Blob([bytes], { type: 'application/zip' })) };
+      $('archive-download').href = archive.url; $('archive-download').download = fileName;
+      $('archive-summary').textContent = `${entries.length} 个文件`;
+      $('archive-entry').replaceChildren(...entries.map((entry, index) => {
+        const option = document.createElement('option'); option.value = index;
+        option.textContent = entry.name + (entry.encrypted ? '（加密）' : !entry.readable ? '（不支持压缩方法）' : '');
+        option.disabled = !entry.readable; return option;
+      }));
+      $('archive-panel').hidden = false;
+      const first = entries.findIndex((entry) => entry.readable && !['unsupported', 'zip'].includes(formatOf(entry.name)));
+      if (first >= 0) { $('archive-entry').value = first; await openArchiveEntry(first); }
+      else { $('archive-entry').selectedIndex = -1; showStatus('ZIP 文件列表已打开', '选择文件可以下载，支持的 PDF、DOCX、HEIC、图片和文本可以直接阅读。加密 ZIP 请先在本地解密。'); }
+    }
+  } catch (error) { showError(error); }
+  finally { loading = false; updateControls(); }
+}
+$('archive-entry').addEventListener('change', async () => {
+  if (loading || !archive) return;
+  loading = true; updateControls();
+  try { await openArchiveEntry(Number($('archive-entry').value)); } catch (error) { showError(error); }
+  finally { loading = false; updateControls(); }
+});
+$('local-file').addEventListener('change', () => {
+  if (loading || !$('local-file').files[0]) return;
+  localFile = $('local-file').files[0]; fileName = FdPdf.filename(localFile.name); fileFormat = formatOf(fileName); load();
 });
 $('retry').addEventListener('click', load);
-function turnPage(number) {
-  if (!pdf) return;
-  pageNumber = Math.max(1, Math.min(pdf.numPages, Math.trunc(Number(number) || 1)));
-  renderSafely();
-  window.scrollTo(0, 0);
-}
-$('previous').addEventListener('click', () => turnPage(pageNumber - 1));
-$('next').addEventListener('click', () => turnPage(pageNumber + 1));
-$('page').addEventListener('change', () => turnPage($('page').value));
-for (const [id, factor] of [['zoom-in', 1.2], ['zoom-out', 1 / 1.2]]) $(id).addEventListener('click', () => {
-  fitWidth = false; scale = Math.min(4, Math.max(.25, scale * factor)); renderSafely();
+$('grant').addEventListener('click', () => {
+  if (!pendingScope) return;
+  api.permissions.request({ origins: [pendingScope] }).then((granted) => granted ? load() : showStatus('尚未获得服务器权限', '可以再次授权，或打开原文件。')).catch(showError);
 });
-$('fit').addEventListener('click', () => { fitWidth = true; renderSafely(); });
+$('fit').addEventListener('click', () => { zoomMode = 'width'; configure(); });
+$('fit-page').addEventListener('click', () => { zoomMode = 'page'; configure(); });
+for (const [id, factor] of [['zoom-in', 1.2], ['zoom-out', 1 / 1.2]]) $(id).addEventListener('click', () => { zoomMode = 'custom'; scale = Math.min(4, Math.max(.02, scale * factor)); configure(); });
+$('reading-mode').addEventListener('change', () => { readingMode = $('reading-mode').value; configure(); });
+$('previous').addEventListener('click', () => view?.goTo(page - 1));
+$('next').addEventListener('click', () => view?.goTo(page + 1));
+$('page').addEventListener('change', () => view?.goTo($('page').value));
 let resizeTimer;
-window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (fitWidth) renderSafely(); }, 150); });
+const resize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (zoomMode !== 'custom') configure(); }, 100); };
+const resizeObserver = new ResizeObserver(resize); resizeObserver.observe($('workspace'));
 document.addEventListener('keydown', (event) => {
-  if (event.target.matches('input, button, a') || event.ctrlKey || event.metaKey || event.altKey) return;
-  if (event.key === 'ArrowLeft') turnPage(pageNumber - 1);
-  if (event.key === 'ArrowRight') turnPage(pageNumber + 1);
+  if (event.key === 'Escape' && embedded) { window.parent.postMessage({ type: 'fdta-close' }, FdPdf.ORIGIN); return; }
+  if (event.target.matches('input, select, button, a, textarea') || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (view && event.key === 'ArrowLeft') { event.preventDefault(); view.goTo(page - 1); }
+  if (view && event.key === 'ArrowRight') { event.preventDefault(); view.goTo(page + 1); }
 });
-window.addEventListener('pagehide', () => { if (objectUrl) URL.revokeObjectURL(objectUrl); });
-load();
+window.addEventListener('pagehide', () => { resizeObserver.disconnect(); clearTimeout(resizeTimer); view?.destroy(); documentTask?.destroy(); workerPort?.terminate(); if (downloadURL) URL.revokeObjectURL(downloadURL); clearArchive(); });
+updateControls(); load();

@@ -5,7 +5,7 @@ export class HostPermissionError extends Error {
   }
 }
 
-export async function readPdf(source, { api, fetchImpl = fetch, limit = 100 * 1024 * 1024, timeout = 60000 } = {}) {
+export async function readFile(source, { api, fetchImpl = fetch, format = 'pdf', limit = 100 * 1024 * 1024, timeout = 60000 } = {}) {
   if (!globalThis.FdPdf.fileUrl(source)) throw new Error('仅支持复旦 eLearning 的文件链接。');
   const baseScope = globalThis.FdPdf.permissionScope(source);
   if (!(await api.permissions.contains({ origins: [baseScope] }))) throw new HostPermissionError(baseScope);
@@ -24,7 +24,10 @@ export async function readPdf(source, { api, fetchImpl = fetch, limit = 100 * 10
   try {
     const response = await fetchImpl(source, {
       credentials: 'include', redirect: 'follow', signal: controller.signal,
-      headers: { Accept: 'application/pdf' },
+      // Canvas submission downloads negotiate the controller format before sending
+      // the attachment. A PDF-only Accept can yield HTTP 406 on the HTML route.
+      // Validate actual file bytes below instead of restricting response MIME here.
+      headers: { Accept: '*/*' },
     });
     if (!response.ok) {
       throw new Error([401, 403].includes(response.status)
@@ -49,8 +52,13 @@ export async function readPdf(source, { api, fetchImpl = fetch, limit = 100 * 10
     const bytes = new Uint8Array(size);
     let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-    if (new TextDecoder().decode(bytes.subarray(0, 5)) !== '%PDF-') {
+    if (format === 'pdf' && new TextDecoder().decode(bytes.subarray(0, 1024)).indexOf('%PDF-') < 0) {
       throw new Error('返回内容不是 PDF，可能是登录页面。请登录 eLearning 后重试。');
+    }
+    if (!size) throw new Error('文件服务返回了空内容。');
+    const type = response.headers.get('content-type') || '';
+    if (/text\/html/i.test(type) || /^\s*(?:<!doctype html|<html[\s>])/i.test(new TextDecoder().decode(bytes.subarray(0, 512)))) {
+      throw new Error('返回了登录页面而不是附件，请先登录 eLearning 后重试。');
     }
     return bytes;
   } catch (error) {
@@ -66,3 +74,4 @@ export async function readPdf(source, { api, fetchImpl = fetch, limit = 100 * 10
     controller.abort();
   }
 }
+export const readPdf = (source, options = {}) => readFile(source, { ...options, format: 'pdf' });

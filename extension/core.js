@@ -11,15 +11,16 @@
   }
   function fileUrl(value) {
     const url = schoolUrl(value);
-    return url && (/^\/(?:courses\/\d+\/)?files\/\d+(?:\/(?:download|preview))?\/?$/.test(url.pathname) || catalog.formats.some((format) => format.pathPattern.test(url.pathname))) ? url : null;
+    return url && (/^\/(?:courses\/\d+\/)?files\/\d+(?:\/(?:download|preview))?\/?$/.test(url.pathname) ||
+      (/^\/courses\/\d+\/assignments\/\d+\/(?:submissions\/\d+|anonymous_submissions\/[a-zA-Z0-9_-]+)\/?$/.test(url.pathname) && /^\d+$/.test(url.searchParams.get('download') || '')) ||
+      catalog.formats.some((format) => format.pathPattern.test(url.pathname))) ? url : null;
   }
   function filename(value) {
-    const name = String(value || 'document.pdf').replace(/[\u0000-\u001f\u007f/\\]/g, '_').trim().slice(0, 180);
-    return /\.pdf$/i.test(name) ? name : `${name || 'document'}.pdf`;
+    return String(value || 'document.pdf').replace(/[\u0000-\u001f\u007f/\\]/g, '_').trim().slice(0, 180) || 'document.pdf';
   }
   function describe(href, label) {
     const url = fileUrl(href);
-    const format = catalog.formats.find((format) => format.labelPattern.test(label));
+    const format = catalog.formats.find((format) => format.labelPattern.test(label) || format.pathPattern.test(url?.pathname || ''));
     if (!url || !format) return null;
     const match = url.pathname.match(/^(\/(?:courses\/\d+\/)?files\/\d+)/);
     const source = match ? new URL(`${match[1]}/download`, url.origin) : new URL(url);
@@ -27,6 +28,7 @@
       source.searchParams.set('download_frd', '1');
       if (url.searchParams.has('verifier')) source.searchParams.set('verifier', url.searchParams.get('verifier'));
     }
+    source.searchParams.delete('inline');
     source.hash = '';
     return { source: source.href, original: url.href, name: filename(label), format: format.id };
   }
@@ -36,6 +38,11 @@
     if (!link || link.hasAttribute('download') || link.matches('.download, .download_link, [aria-label*="Download"], [aria-label*="下载"]')) return null;
     const label = link.dataset.filename || link.textContent?.trim() || link.title || '';
     return describe(link.href, label);
+  }
+  function viewerUrl(file, getURL) {
+    const url = new URL(getURL('viewer.html'));
+    for (const key of ['source', 'original', 'name', 'format']) url.searchParams.set(key, file[key] || '');
+    return url.href;
   }
   function allowedMessage(message, sender, extensionId) {
     return sender.id === extensionId && Boolean(sender.tab) && Boolean(schoolUrl(sender.url)) &&
@@ -49,5 +56,5 @@
       return `${url.origin}/*`;
     } catch { return null; }
   }
-  root.FdPdf = Object.freeze({ ORIGIN, schoolUrl, fileUrl, filename, describe, fromClick, allowedMessage, permissionScope });
+  root.FdPdf = Object.freeze({ ORIGIN, schoolUrl, fileUrl, filename, describe, fromClick, allowedMessage, permissionScope, viewerUrl });
 })(globalThis);

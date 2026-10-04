@@ -2,3 +2,6 @@
 *.png binary
 *.pdf binary
 *.zip binary
+*.heic binary
+*.heif binary
+*.gz binary

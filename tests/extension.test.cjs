@@ -78,6 +78,22 @@ function fakeApi() {
 }
 const readerModule = import(pathToFileURL(path.join(__dirname, '../extension/reader.mjs')));
 
+test('Canvas submission download does not negotiate PDF as the controller format (HTTP 406 regression)', async () => {
+  const { readPdf } = await readerModule;
+  const submission = `${core.ORIGIN}/courses/123/assignments/7/submissions/9?download=456`;
+  let requests = 0;
+  const bytes = await readPdf(submission, { api: fakeApi(), fetchImpl: async (url, options) => {
+    requests++;
+    assert.equal(url, submission);
+    // A Rails HTML controller refuses a PDF-only format before sending the file.
+    if (options.headers.Accept !== '*/*') return new Response('', { status: 406 });
+    assert.equal(options.credentials, 'include');
+    return new Response('%PDF-1.7\nattachment', { headers: { 'content-type': 'application/pdf' } });
+  } });
+  assert.equal(requests, 1);
+  assert.equal(new TextDecoder().decode(bytes), '%PDF-1.7\nattachment');
+});
+
 test('retrieves PDF bytes with credentials and cleans up request observers', async () => {
   const { readPdf } = await readerModule;
   const api = fakeApi();

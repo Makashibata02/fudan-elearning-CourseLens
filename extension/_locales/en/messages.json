@@ -1,5 +1,11 @@
 {
-  "extensionName": { "message": "Fudan eLearning PDF Preview" },
-  "extensionDescription": { "message": "Preview Fudan eLearning PDFs in your browser with a bundled reader. No Tampermonkey or third-party document uploads." },
-  "actionTitle": { "message": "eLearning PDF Preview" }
+  "extensionName": {
+    "message": "CourseLens — Fudan eLearning File Reader"
+  },
+  "extensionDescription": {
+    "message": "Read PDF, DOCX, HEIC, ZIP, images and text locally, with whole-page fit, continuous scrolling and course attachment modals."
+  },
+  "actionTitle": {
+    "message": "CourseLens"
+  }
 }
