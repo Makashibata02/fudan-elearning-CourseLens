@@ -237,10 +237,11 @@ try {
   await check('DOCX pages and actual HEIC worker rendering', async () => {
     await course.locator('[data-action="close"]').click(); await course.locator('#docx').click(); viewer = await panel(course); await rendered(viewer);
     assert.ok(await viewer.locator('section.docx').count() >= 2);
+    await toggleMenu(viewer); await viewer.locator('#reading-mode').selectOption('page'); await toggleMenu(viewer); await viewer.locator('#next').click(); assert.equal(await viewer.locator('section.docx:not([hidden])').count(), 1);
+    await viewer.locator('#previous').click();
+    await toggleMenu(viewer); await viewer.locator('#reading-mode').selectOption('scroll'); await toggleMenu(viewer);
     await viewer.locator('#fit-mode').selectOption('width');
     await course.locator('#fdta-preview section').screenshot({ path: path.join(output, 'docx-modal.png') });
-    await viewer.locator('#fit-mode').selectOption('page');
-    await toggleMenu(viewer); await viewer.locator('#reading-mode').selectOption('page'); await toggleMenu(viewer); await viewer.locator('#next').click(); assert.equal(await viewer.locator('section.docx:not([hidden])').count(), 1);
     await course.locator('[data-action="close"]').click(); await course.locator('#heic').click(); viewer = await panel(course); await rendered(viewer);
     assert.ok(await viewer.locator('#other-document canvas').evaluate((el) => el.width === 512 && el.height === 512));
     await course.screenshot({ path: path.join(output, 'heic-modal.png') });
