@@ -54,7 +54,7 @@ test('PDF defaults to scroll, fits full page, tracks scrolling, supports manual 
   reader.configure({ zoomMode: 'width' }); await settle(); assert.ok(reader.entries[2].scale > .8);
   reader.configure({ zoomMode: 'page', readingMode: 'scroll' }); await settle();
   assert.equal(reader.entries.filter((entry) => !entry.element.hidden).length, 12);
-  assert.deepEqual(errors, []); reader.destroy(); assert.equal(target.children.length, 0);
+  assert.deepEqual(errors, []); reader.destroy(); assert.equal(target.children.length, 0); assert.equal(reader.entries.length, 0); assert.equal(reader.pdf, null);
 });
 
 test('real DOCX pages can switch between continuous scrolling and one-page mode', async (t) => {
@@ -70,7 +70,7 @@ test('real DOCX pages can switch between continuous scrolling and one-page mode'
   assert.ok(state.scale < 1); reader.configure({ readingMode: 'page' }); reader.goTo(2);
   assert.equal(pages.filter((el) => !el.hidden).length, 1); assert.equal(pages[1].hidden, false); assert.equal(state.page, 2);
   reader.configure({ readingMode: 'scroll' }); assert.ok(pages.every((el) => !el.hidden));
-  reader.destroy(); assert.equal(target.children.length, 0);
+  reader.destroy(); assert.equal(target.children.length, 0); assert.equal(reader.pages, 0);
 });
 
 test('ZIP lists Chinese folders, ignores Apple metadata, and verifies both stored/deflated entry bytes', async () => {
@@ -144,4 +144,32 @@ test('bundled HEIC worker decodes a real official libheif HEIC sample into color
   assert.ok(data.imageData.width > 0); assert.ok(data.imageData.height > 0);
   assert.equal(data.imageData.data.length, data.imageData.width * data.imageData.height * 4);
   assert.ok(data.imageData.data.some((byte, index) => index % 4 !== 3 && byte !== 0), 'decoded color pixels');
+});
+
+
+test('aborting preview parsing terminates HEIC, ZIP and PowerPoint workers without posting another request', async () => {
+  const { decodeHeic } = await import('../extension/heic.mjs');
+  const { readZipEntry } = await import('../extension/zip.mjs');
+  const { parsePowerPoint } = await import('../dist/chromium/vendor/powerpoint.bundle.mjs');
+  for (const parse of [
+    (options) => decodeHeic(new Uint8Array([1]), options),
+    (options) => readZipEntry(new Uint8Array([1]), { readable: true, dataStart: 0, compressed: 1, size: 1, crc: 0, method: 0 }, options),
+    (options) => parsePowerPoint(new Uint8Array([1]), options),
+  ]) {
+    let worker; const abort = new AbortController();
+    class WaitingWorker { constructor() { worker = this; this.terminated = false; } postMessage() {} terminate() { this.terminated = true; } }
+    const pending = parse({ signal: abort.signal, WorkerImpl: WaitingWorker });
+    abort.abort(); await assert.rejects(pending, { name: 'AbortError' }); assert.equal(worker.terminated, true);
+    assert.throws(() => parse({ signal: abort.signal, WorkerImpl: class { constructor() { throw new Error('must not start'); } } }), { name: 'AbortError' });
+  }
+});
+
+test('a PDF closed while its first page loads cannot recreate canvases or hold document references', async (t) => {
+  const { root, target } = domGlobals(t);
+  const { PdfReader } = await import('../extension/pdf-reader.mjs');
+  let firstPage;
+  const reader = new PdfReader({ root, target, pdfjs: {} });
+  const pending = reader.open({ numPages: 1, getPage: () => new Promise((resolve) => { firstPage = resolve; }) });
+  reader.destroy(); firstPage({ getViewport: () => ({ width: 600, height: 800 }) }); await pending;
+  assert.equal(target.childElementCount, 0); assert.equal(reader.entries.length, 0); assert.equal(reader.pdf, null);
 });

@@ -104,6 +104,20 @@ try {
     const fits = await viewer.evaluate(() => document.querySelector('.paper').getBoundingClientRect().height < document.getElementById('workspace').clientHeight);
     assert.ok(fits);
   });
+  await check('manual cleanup revokes attachment URLs, clears pages, and rereads only on demand', async () => {
+    const blob = await viewer.locator('#download').getAttribute('href');
+    const before = report.network.filter((item) => item.event === 'request' && item.type === 'fetch').length;
+    await viewer.locator('#clear-preview').click(); await viewer.waitForURL('**cleared=1');
+    await viewer.locator('#status-title').filter({ hasText: '预览已清理' }).waitFor();
+    assert.equal(await viewer.locator('#pdf-document canvas, #other-document > *').count(), 0);
+    assert.equal(await viewer.locator('#download').getAttribute('href'), null);
+    assert.equal(await viewer.locator('#local-file').evaluate((input) => input.files.length), 0);
+    assert.equal(await viewer.evaluate(async (url) => { try { await fetch(url); return false; } catch { return true; } }, blob), true);
+    await delay(200);
+    assert.equal(report.network.filter((item) => item.event === 'request' && item.type === 'fetch').length, before);
+    await viewer.locator('#retry').click(); await rendered(viewer, 'PDF preview works');
+    assert.ok(report.network.filter((item) => item.event === 'request' && item.type === 'fetch').length > before);
+  });
   await check('scroll tracking, manual navigation and zoom', async () => {
     await viewer.locator('#workspace').evaluate((root) => { root.scrollTop = root.scrollHeight; });
     await viewer.waitForFunction(() => document.getElementById('page').value === '2');
@@ -151,6 +165,11 @@ try {
       if (suffix === '.txt') assert.equal(await viewer.locator(selector).textContent(), 'ZIP 中文答案');
     }
     await course.screenshot({ path: path.join(output, 'zip-modal.png') });
+    const archiveBlob = await viewer.locator('#archive-download').getAttribute('href');
+    await viewer.locator('#clear-preview').click(); await viewer.waitForURL('**cleared=1');
+    await viewer.locator('#status-title').filter({ hasText: '预览已清理' }).waitFor();
+    assert.equal(await viewer.locator('#archive-entry option').count(), 0); assert.equal(await viewer.locator('#archive-download').getAttribute('href'), null);
+    assert.equal(await viewer.evaluate(async (url) => { try { await fetch(url); return false; } catch { return true; } }, archiveBlob), true);
   });
   await check('Escape and native download controls', async () => {
     await course.keyboard.press('Escape'); await course.locator('#fdta-preview').waitFor({ state: 'detached' });

@@ -7,6 +7,8 @@ import { parseZip, readZipEntry } from './zip.mjs';
 const api = globalThis.browser || chrome;
 const $ = (id) => document.getElementById(id);
 const query = new URLSearchParams(location.search);
+const previewController = new AbortController();
+const signal = previewController.signal;
 const demoFormat = ['docx', 'zip', 'pptx'].includes(query.get('demo')) ? query.get('demo') : query.get('demo') === '1' ? 'pdf' : null;
 const source = query.get('source'), original = query.get('original') || source;
 const embedded = window.top !== window;
@@ -42,6 +44,7 @@ function updateControls() {
   $('zoom-label').textContent = `${Math.round(scale * 100)}%`;
   $('format-note').hidden = !['docx', 'powerpoint'].includes(format);
   $('format-note').textContent = format === 'powerpoint' ? '课件按静态幻灯片阅读。字体、复杂图形和特殊公式可能与 PowerPoint 不同，动画、音视频及加密课件暂不支持。' : 'DOCX 复杂版式可能与 Word 不同；如公式或图表缺失，请下载核对。';
+  $('clear-preview').disabled = query.has('cleared') && !loading && !view && !archive && !localFile;
   $('archive-entry').disabled = loading; $('local-file').disabled = loading;
 }
 function onChange(state) { page = state.page; pageCount = state.pages; scale = state.scale; updateControls(); }
@@ -51,6 +54,7 @@ function configure() {
   catch (error) { showError(error); }
 }
 function showError(error) {
+  if (signal.aborted) return;
   if (error instanceof HostPermissionError) {
     pendingScope = error.scope; $('grant').hidden = embedded;
     showStatus('需要允许读取文件服务器', `${new URL(error.scope).hostname}\n${embedded ? '点击“独立阅读 / 授权”，在新标签页允许此服务器，再返回重新打开附件。' : '点击下方按钮，仅允许此服务器；也可以打开原文件。'}`);
@@ -60,17 +64,22 @@ function showError(error) {
 }
 async function clearDocument() {
   view?.destroy(); view = null; pageCount = 0;
-  await documentTask?.destroy(); documentTask = null;
-  workerPort?.terminate(); workerPort = null; pdfjs.GlobalWorkerOptions.workerPort = null;
+  $('pdf-document').replaceChildren(); $('other-document').replaceChildren();
   if (downloadURL) URL.revokeObjectURL(downloadURL); downloadURL = null;
+  $('download').removeAttribute('href'); $('download').removeAttribute('download');
   $('download').hidden = true; $('pdf-document').hidden = true; $('other-document').hidden = true;
+  const task = documentTask, port = workerPort; documentTask = null; workerPort = null; pdfjs.GlobalWorkerOptions.workerPort = null;
+  try { await task?.destroy(); } finally { port?.terminate(); }
 }
+
 function clearArchive() {
   if (archive?.url) URL.revokeObjectURL(archive.url);
+  if (archive) { archive.bytes = null; archive.entries = []; }
+  $('archive-download').removeAttribute('href'); $('archive-download').removeAttribute('download'); $('archive-summary').textContent = '';
   archive = null; $('archive-panel').hidden = true; $('archive-entry').replaceChildren();
 }
 async function display(bytes, nextName, nextFormat) {
-  await clearDocument(); name = nextName; format = nextFormat; page = 1; scale = 1; zoomMode = 'page';
+  await clearDocument(); signal.throwIfAborted(); name = nextName; format = nextFormat; page = 1; scale = 1; zoomMode = 'page';
   updateControls(); $('workspace').scrollTop = 0;
   const mime = format === 'pdf' ? 'application/pdf' : format === 'heic' ? 'image/heic' : 'application/octet-stream';
   downloadURL = URL.createObjectURL(new Blob([bytes], { type: mime }));
@@ -90,30 +99,30 @@ async function display(bytes, nextName, nextFormat) {
       if (password === null) { documentTask.destroy(); showStatus('已取消打开加密文件', '点击重试可重新打开。', true); }
       else updatePassword(password);
     };
-    const pdf = await documentTask.promise;
+    const pdf = await documentTask.promise; signal.throwIfAborted();
     loadStage = '绘制 PDF 页面';
     view = new PdfReader({ pdfjs, root: $('workspace'), target: $('pdf-document'), name, onChange, onError: showError });
     view.readingMode = readingMode; view.zoomMode = zoomMode;
     await view.open(pdf);
   } else {
-    view = await renderOther(bytes, format, $('other-document'), { root: $('workspace'), api, onChange });
+    view = await renderOther(bytes, format, $('other-document'), { root: $('workspace'), api, onChange, signal });
     configure();
   }
-  $('status').hidden = true; updateControls();
+  signal.throwIfAborted(); $('status').hidden = true; updateControls();
 }
 async function openArchiveEntry(index) {
   const entry = archive.entries[index];
   if (!entry) return;
   await clearDocument(); name = entry.name; format = formatOf(entry.name); updateControls();
   loadStage = '解压 ZIP 内文件'; showStatus('正在读取 ZIP 内文件…', entry.name);
-  const bytes = await readZipEntry(archive.bytes, entry, { workerURL: api.runtime.getURL('vendor/zip.worker.mjs') });
+  const bytes = await readZipEntry(archive.bytes, entry, { workerURL: api.runtime.getURL('vendor/zip.worker.mjs'), signal });
   await display(bytes, entry.name, formatOf(entry.name));
 }
 async function load() {
   if (loading) return;
   loading = true; $('grant').hidden = true; pendingScope = null; updateControls();
   try {
-    await clearDocument(); clearArchive(); name = fileName; format = fileFormat; updateControls();
+    await clearDocument(); signal.throwIfAborted(); clearArchive(); name = fileName; format = fileFormat; updateControls();
     if (!demoFormat && !localFile && !FdPdf.fileUrl(source)) { showStatus('打开作业文件', '回到 eLearning 点击文件名，或在这里打开本地文件。'); return; }
     loadStage = '读取附件'; showStatus('正在读取文件…', '文件在浏览器本地处理。');
     let bytes;
@@ -124,7 +133,8 @@ async function load() {
       const response = await fetch(api.runtime.getURL(`demo.${demoFormat}`));
       if (!response.ok) throw new Error('内置示例缺失，请重新加载扩展。');
       bytes = new Uint8Array(await response.arrayBuffer());
-    } else bytes = await readFile(source, { api, format: fileFormat });
+    } else bytes = await readFile(source, { api, format: fileFormat, signal });
+    signal.throwIfAborted();
     if (fileFormat !== 'zip') await display(bytes, fileName, fileFormat);
     else {
       loadStage = '读取 ZIP 文件列表'; const entries = parseZip(bytes);
@@ -139,7 +149,7 @@ async function load() {
       $('archive-panel').hidden = false;
       const first = entries.findIndex((entry) => entry.readable && !['unsupported', 'zip'].includes(formatOf(entry.name)));
       if (first >= 0) { $('archive-entry').value = first; await openArchiveEntry(first); }
-      else { $('archive-entry').selectedIndex = -1; showStatus('ZIP 文件列表已打开', '选择文件可以下载，支持的 PDF、DOCX、HEIC、图片和文本可以直接阅读。加密 ZIP 请先在本地解密。'); }
+      else { $('archive-entry').selectedIndex = -1; showStatus('ZIP 文件列表已打开', '选择文件可以下载，支持的 PDF、DOCX、PPT / PPTX、HEIC、图片和文本可以直接阅读。加密 ZIP 请先在本地解密。'); }
     }
   } catch (error) { showError(error); }
   finally { loading = false; updateControls(); }
@@ -155,6 +165,10 @@ $('local-file').addEventListener('change', () => {
   localFile = $('local-file').files[0]; fileName = FdPdf.filename(localFile.name); fileFormat = formatOf(fileName); load();
 });
 $('retry').addEventListener('click', load);
+$('clear-preview').addEventListener('click', () => {
+  const next = new URL(location.href); next.searchParams.set('cleared', '1');
+  location.replace(next.href);
+});
 $('grant').addEventListener('click', () => {
   if (!pendingScope) return;
   api.permissions.request({ origins: [pendingScope] }).then((granted) => granted ? load() : showStatus('尚未获得服务器权限', '可以再次授权，或打开原文件。')).catch(showError);
@@ -175,5 +189,14 @@ document.addEventListener('keydown', (event) => {
   if (view && event.key === 'ArrowLeft') { event.preventDefault(); view.goTo(page - 1); }
   if (view && event.key === 'ArrowRight') { event.preventDefault(); view.goTo(page + 1); }
 });
-window.addEventListener('pagehide', () => { resizeObserver.disconnect(); clearTimeout(resizeTimer); view?.destroy(); documentTask?.destroy(); workerPort?.terminate(); if (downloadURL) URL.revokeObjectURL(downloadURL); clearArchive(); });
-updateControls(); load();
+window.addEventListener('pagehide', () => {
+  previewController.abort(); resizeObserver.disconnect(); clearTimeout(resizeTimer);
+  const port = workerPort, pending = clearDocument(); port?.terminate(); pending.catch(() => {});
+  clearArchive(); localFile = null; $('local-file').value = '';
+});
+window.addEventListener('pageshow', (event) => { if (event.persisted && signal.aborted) location.reload(); });
+updateControls();
+if (query.has('cleared')) {
+  $('retry').textContent = '重新读取';
+  showStatus('预览已清理', source || demoFormat ? '当前附件的预览数据已释放。需要时可重新读取。' : '当前附件的预览数据已释放，可重新选择本地文件。', Boolean(source || demoFormat));
+} else load();

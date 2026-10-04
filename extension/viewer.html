@@ -18,11 +18,11 @@
       <button id="zoom-in" aria-label="放大" disabled>+</button><button id="fit-page" disabled>适应页面</button><button id="fit" disabled>适应宽度</button>
       <label class="sr-only" for="reading-mode">阅读方式</label><select id="reading-mode" disabled><option value="scroll">连续滚动</option><option value="page">手动翻页</option></select>
     </nav>
-    <div class="actions"><a id="download" class="button primary" hidden>下载文件</a><a id="standalone" class="button" target="_blank" rel="noopener" hidden>独立阅读 / 授权</a><a id="original" class="button" target="_blank" rel="noopener noreferrer" hidden>打开原文件</a><a class="help" href="help.html" target="_blank" rel="noopener" aria-label="使用帮助">?</a></div>
+    <div class="actions"><a id="download" class="button primary" hidden>下载文件</a><a id="standalone" class="button" target="_blank" rel="noopener" hidden>独立阅读 / 授权</a><a id="original" class="button" target="_blank" rel="noopener noreferrer" hidden>打开原文件</a><button id="clear-preview" title="释放当前预览数据并停止读取">清理预览</button><a class="help" href="help.html" target="_blank" rel="noopener" aria-label="使用帮助">?</a></div>
   </header>
   <aside id="demo-note" hidden>这是内置示例，无需登录或联网。可试用适应页面、连续滚动、手动翻页和 ZIP 内文件切换。</aside>
   <aside id="format-note" hidden>DOCX 复杂版式可能与 Word 不同；如公式或图表缺失，请下载核对。</aside>
-  <section id="local-picker" hidden><label class="button">打开本地文件<input id="local-file" type="file" accept=".pdf,.docx,.heic,.heif,.zip,.png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.md,.csv,.tsv,.json,.log,.py,.c,.cpp,.h,.java,.js,.ts,.sql,.r,.tex,.doc,.xlsx,.pptx" hidden></label><span>文件只在浏览器里读取。</span></section>
+  <section id="local-picker" hidden><label class="button">打开本地文件<input id="local-file" type="file" accept=".pdf,.docx,.heic,.heif,.zip,.png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.md,.csv,.tsv,.json,.log,.py,.c,.cpp,.h,.java,.js,.ts,.sql,.r,.tex,.doc,.xlsx,.ppt,.pptx" hidden></label><span>文件只在浏览器里读取。</span></section>
   <section id="archive-panel" hidden><label for="archive-entry">ZIP 内文件</label><select id="archive-entry"></select><span id="archive-summary"></span><a id="archive-download" class="button">下载 ZIP</a></section>
   <main id="workspace">
     <section id="status" class="status" aria-live="polite">

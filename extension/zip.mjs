@@ -51,13 +51,17 @@ export function parseZip(bytes) {
   return entries.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true }));
 }
 
-export function readZipEntry(bytes, entry, { workerURL, WorkerImpl = Worker, timeout = 20000 } = {}) {
+export function readZipEntry(bytes, entry, { workerURL, WorkerImpl = Worker, timeout = 20000, signal } = {}) {
   if (!entry.readable) return Promise.reject(new Error(entry.encrypted ? '加密 ZIP 暂不支持，请先在本地解密。' : '该 ZIP 使用了不受支持的压缩方法。'));
+  signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
     const worker = new WorkerImpl(workerURL, { type: 'module' });
     let done = false;
-    const finish = (error, data) => { if (done) return; done = true; clearTimeout(timer); worker.terminate(); error ? reject(error) : resolve(data); };
+    const finish = (error, data) => { if (done) return; done = true; clearTimeout(timer); signal?.removeEventListener('abort', cancel); worker.terminate(); error ? reject(error) : resolve(data); };
     const timer = setTimeout(() => finish(new Error('ZIP 解压超时，请下载后阅读。')), timeout);
+    const cancel = () => finish(new DOMException('已停止解析附件。', 'AbortError'));
+    signal?.addEventListener('abort', cancel, { once: true });
+    if (signal?.aborted) { cancel(); return; }
     worker.onerror = () => finish(new Error('ZIP 解压器未能运行。'));
     worker.onmessage = ({ data }) => data.error ? finish(new Error(data.error)) : finish(null, new Uint8Array(data.buffer));
     const buffer = bytes.slice(entry.dataStart, entry.dataStart + entry.compressed).buffer;

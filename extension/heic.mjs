@@ -1,14 +1,18 @@
-export function decodeHeic(bytes, { workerURL, WorkerImpl = Worker, timeout = 45000 } = {}) {
+export function decodeHeic(bytes, { workerURL, WorkerImpl = Worker, timeout = 45000, signal } = {}) {
   if (bytes.byteLength > 100 * 1024 * 1024) return Promise.reject(new Error('HEIC 文件超过 100 MiB。'));
+  signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
     const worker = new WorkerImpl(workerURL);
     let done = false;
     const finish = (error, data) => {
       if (done) return;
-      done = true; clearTimeout(timer); worker.terminate();
+      done = true; clearTimeout(timer); signal?.removeEventListener('abort', cancel); worker.terminate();
       if (error) reject(error); else resolve(data);
     };
     const timer = setTimeout(() => finish(new Error('HEIC 解码超时，请下载原件阅读。')), timeout);
+    const cancel = () => finish(new DOMException('已停止解析附件。', 'AbortError'));
+    signal?.addEventListener('abort', cancel, { once: true });
+    if (signal?.aborted) { cancel(); return; }
     worker.onerror = () => finish(new Error('HEIC 解码器未能运行，请重新加载插件后重试。'));
     worker.onmessage = ({ data }) => {
       if (data.id !== 'preview') return;

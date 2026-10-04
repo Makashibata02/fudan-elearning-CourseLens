@@ -5,11 +5,14 @@ export class HostPermissionError extends Error {
   }
 }
 
-export async function readFile(source, { api, fetchImpl = fetch, format = 'pdf', limit = 100 * 1024 * 1024, timeout = 60000 } = {}) {
+export async function readFile(source, { api, fetchImpl = fetch, format = 'pdf', limit = 100 * 1024 * 1024, timeout = 60000, signal } = {}) {
   if (!globalThis.FdPdf.fileUrl(source)) throw new Error('仅支持复旦 eLearning 的文件链接。');
   const baseScope = globalThis.FdPdf.permissionScope(source);
   if (!(await api.permissions.contains({ origins: [baseScope] }))) throw new HostPermissionError(baseScope);
+  signal?.throwIfAborted();
   const controller = new AbortController();
+  const cancel = () => controller.abort();
+  signal?.addEventListener('abort', cancel, { once: true });
   const timer = setTimeout(() => controller.abort(), timeout);
   const seen = new Set([source]);
   let redirect = null;
@@ -23,7 +26,7 @@ export async function readFile(source, { api, fetchImpl = fetch, format = 'pdf',
   api.webRequest.onBeforeRedirect.addListener(observe, { urls: ['https://*/*'] });
   try {
     const response = await fetchImpl(source, {
-      credentials: 'include', redirect: 'follow', signal: controller.signal,
+      credentials: 'include', redirect: 'follow', cache: 'no-store', signal: controller.signal,
       // Canvas submission downloads negotiate the controller format before sending
       // the attachment. A PDF-only Accept can yield HTTP 406 on the HTML route.
       // Validate actual file bytes below instead of restricting response MIME here.
@@ -52,6 +55,8 @@ export async function readFile(source, { api, fetchImpl = fetch, format = 'pdf',
     const bytes = new Uint8Array(size);
     let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    chunks.length = 0;
+    signal?.throwIfAborted();
     if (format === 'pdf' && new TextDecoder().decode(bytes.subarray(0, 1024)).indexOf('%PDF-') < 0) {
       throw new Error('返回内容不是 PDF，可能是登录页面。请登录 eLearning 后重试。');
     }
@@ -62,6 +67,7 @@ export async function readFile(source, { api, fetchImpl = fetch, format = 'pdf',
     }
     return bytes;
   } catch (error) {
+    if (signal?.aborted) throw new DOMException('已停止读取附件。', 'AbortError');
     if (controller.signal.aborted) throw new Error('读取超时，请检查网络后重试。');
     if (error instanceof TypeError && redirect) {
       const scope = globalThis.FdPdf.permissionScope(redirect);
@@ -69,6 +75,7 @@ export async function readFile(source, { api, fetchImpl = fetch, format = 'pdf',
     }
     throw error;
   } finally {
+    signal?.removeEventListener('abort', cancel);
     clearTimeout(timer);
     api.webRequest.onBeforeRedirect.removeListener(observe);
     controller.abort();

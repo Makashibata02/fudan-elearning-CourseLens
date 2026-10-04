@@ -53,7 +53,7 @@
     selector = root.querySelector('select'); notice = root.querySelector('p'); frame = root.querySelector('iframe');
     selector.addEventListener('change', () => open(files[Number(selector.value)], panelMode === 'modal'));
     root.querySelector('[data-action="tab"]').addEventListener('click', () => {
-      if (current) standalone(current).catch((error) => { notice.hidden = false; notice.textContent = error.message; });
+      if (current) standalone(current).catch((error) => { if (notice) { notice.hidden = false; notice.textContent = error.message; } });
     });
     root.querySelector('[data-action="close"]').addEventListener('click', close);
     if (modal) {
@@ -76,7 +76,8 @@
     if (host?.hasAttribute('data-original-position') && host.parentElement) host.parentElement.style.position = host.dataset.originalPosition;
     host?.remove();
     if (panelMode === 'modal') { document.documentElement.style.overflow = savedOverflow || ''; previousFocus?.focus(); }
-    panelMode = null;
+    panelMode = null; host = root = frame = selector = notice = null;
+    files = []; signature = ''; previousFocus = null; savedOverflow = null;
   }
   function options() {
     if (!selector) return;

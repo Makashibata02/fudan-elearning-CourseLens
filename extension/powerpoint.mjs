@@ -1,10 +1,14 @@
 import createDOMPurify from 'dompurify';
 
-export function parsePowerPoint(bytes, { workerURL, WorkerImpl = Worker, timeout = 60000 } = {}) {
+export function parsePowerPoint(bytes, { workerURL, WorkerImpl = Worker, timeout = 60000, signal } = {}) {
+  signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
     const worker = new WorkerImpl(workerURL, { type: 'module' }); let done = false;
-    const finish = (error, result) => { if (done) return; done = true; clearTimeout(timer); worker.terminate(); error ? reject(error) : resolve(result); };
+    const finish = (error, result) => { if (done) return; done = true; clearTimeout(timer); signal?.removeEventListener('abort', cancel); worker.terminate(); error ? reject(error) : resolve(result); };
     const timer = setTimeout(() => finish(new Error('课件解析超时，请下载后阅读。')), timeout);
+    const cancel = () => finish(new DOMException('已停止解析附件。', 'AbortError'));
+    signal?.addEventListener('abort', cancel, { once: true });
+    if (signal?.aborted) { cancel(); return; }
     worker.onerror = () => finish(new Error('课件阅读器未能运行，请重新加载插件后重试。'));
     worker.onmessage = ({ data }) => { if (data?.id === 'slides') finish(data.error ? new Error(data.error) : null, data.presentation); };
     const buffer = bytes.slice().buffer;

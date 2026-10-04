@@ -1,6 +1,6 @@
 # CourseLens · 复旦 eLearning 文件阅读器
 
-在 eLearning 点开课件或作业附件，就能直接阅读和复制文字，临时看课程资料不用下载，省点空间也省点心；助教批改作业时，也可以在 SpeedGrader 左侧看附件，右侧继续评分和写评语。支持预览 **常见图片（JPG/PNG，以及HEIC）、PDF、DOCX、PPT / PPTX、和 ZIP**。
+在 eLearning 点开课件或作业附件，就能直接阅读和复制文字，临时看课程资料不用手动保存文件，也不用切换软件；助教批改作业时，也可以在 SpeedGrader 左侧看附件，右侧继续评分和写评语。支持预览 **常见图片（JPG/PNG，以及HEIC）、PDF、DOCX、PPT / PPTX、和 ZIP**。
 
 本项目为插件，适用于 Chrome 和 Microsoft Edge。
 
@@ -41,13 +41,13 @@ ZIP 内的文件也能直接阅读：在目录列表中选择文件，就可以�
 
 ## 安装
 
-当前版本 **2.2.0**，Chrome 和 Microsoft Edge 使用同一个安装包。可以直接下载 Release，也可以克隆仓库或下载源码后自行构建。
+当前版本 **2.2.1**，Chrome 和 Microsoft Edge 使用同一个安装包。可以直接下载 Release，也可以克隆仓库或下载源码后自行构建。
 
 ### 下载 Release（推荐）
 
 不用安装 Node.js，下载、解压后就能加载插件。
 
-1. 打开 [Releases](https://github.com/Makashibata02/fudan-elearning-CourseLens/releases/latest)，在 Assets 中下载 `fudan-elearning-courselens-chromium-2.2.0.zip`。也可以[直接下载安装包](https://github.com/Makashibata02/fudan-elearning-CourseLens/releases/download/v2.2.0/fudan-elearning-courselens-chromium-2.2.0.zip)。
+1. 打开 [Releases](https://github.com/Makashibata02/fudan-elearning-CourseLens/releases/latest)，在 Assets 中下载 `fudan-elearning-courselens-chromium-2.2.1.zip`。也可以[直接下载安装包](https://github.com/Makashibata02/fudan-elearning-CourseLens/releases/download/v2.2.1/fudan-elearning-courselens-chromium-2.2.1.zip)。
 2. 解压到一个长期保留的文件夹。这个文件夹之后仍要保留，浏览器会从这里加载插件。
 3. Chrome 打开 `chrome://extensions`，Edge 打开 `edge://extensions`。开启“开发者模式”，点击“加载已解压的扩展”，选择包含 `manifest.json` 的文件夹。
 4. 在同一浏览器登录复旦 eLearning，刷新已经打开的课程页面，再点击附件文件名。
@@ -67,7 +67,7 @@ cd fudan-elearning-CourseLens
 
 ### 下载源码后构建
 
-没有使用 Git 的话，可以下载 Release 中的 `fudan-elearning-courselens-source-2.2.0.zip`；想尝试 main 的最新代码，也可以在仓库首页点击 **Code → Download ZIP**。
+没有使用 Git 的话，可以下载 Release 中的 `fudan-elearning-courselens-source-2.2.1.zip`；想尝试 main 的最新代码，也可以在仓库首页点击 **Code → Download ZIP**。
 
 解压后进入含有 `package.json` 的目录，按[从源码构建](#从源码构建)运行命令，再加载生成的 `dist/chromium`。这两种源码下载方式都需要 Node.js。
 
@@ -83,7 +83,11 @@ cd fudan-elearning-CourseLens
 
 附件直接从学校或你允许的文件服务器读取，在浏览器本地解析，**不会上传到在线转换或预览服务**。阅读器所需的代码随安装包提供，不会从 CDN 临时加载；插件不会改动成绩、评语或提交状态。
 
-默认网站权限只覆盖复旦 eLearning。如果文件跳转到其他服务器，阅读器会显示实际域名，再由你选择是否允许访问。预览会传输文件到浏览器，只有点击下载时才主动保存到下载目录。详见[隐私说明](docs/PRIVACY.md)。
+默认网站权限只覆盖复旦 eLearning。如果文件跳转到其他服务器，阅读器会显示实际域名，再由你选择是否允许访问。预览仍需要把文件数据传到浏览器，只有点击下载时才主动保存到下载目录。
+
+附件请求使用 `cache: "no-store"`，绕过浏览器已有的 HTTP 缓存，也不把本次响应写入 HTTP 缓存。关闭预览、切换附件或切换学生时会自动释放相应阅读资源；工具栏中的“清理预览”可以立即停止当前读取或解析，释放文件临时链接、页面和 ZIP 数据。清理后按“重新读取”可再次打开附件，本地文件需要重新选择。
+
+这项机制不会清除浏览器以前留下的缓存、已下载文件或历史记录，也不承诺数据在磁盘或内存中完全无痕。需要清除历史缓存时，请使用浏览器设置。详见[隐私说明](docs/PRIVACY.md)。
 
 ## 目前的限制
 

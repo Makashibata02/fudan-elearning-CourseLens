@@ -87,7 +87,7 @@ test('Canvas submission download does not negotiate PDF as the controller format
     assert.equal(url, submission);
     // A Rails HTML controller refuses a PDF-only format before sending the file.
     if (options.headers.Accept !== '*/*') return new Response('', { status: 406 });
-    assert.equal(options.credentials, 'include');
+    assert.equal(options.credentials, 'include'); assert.equal(options.cache, 'no-store');
     return new Response('%PDF-1.7\nattachment', { headers: { 'content-type': 'application/pdf' } });
   } });
   assert.equal(requests, 1);
@@ -98,7 +98,7 @@ test('retrieves PDF bytes with credentials and cleans up request observers', asy
   const { readPdf } = await readerModule;
   const api = fakeApi();
   const bytes = await readPdf(source, { api, fetchImpl: async (url, options) => {
-    assert.equal(url, source); assert.equal(options.credentials, 'include');
+    assert.equal(url, source); assert.equal(options.credentials, 'include'); assert.equal(options.cache, 'no-store');
     return new Response('%PDF-1.7\ntest');
   } });
   assert.equal(new TextDecoder().decode(bytes), '%PDF-1.7\ntest');
@@ -133,4 +133,22 @@ test('a timed out request is aborted and the observer is released', async () => 
   const api = fakeApi();
   await assert.rejects(readPdf(source, { api, timeout: 5, fetchImpl: (_, { signal }) => new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))) }), /超时/);
   assert.equal(api.listening, false);
+});
+
+
+test('closing a preview aborts a streamed attachment and releases its request observer', async () => {
+  const { readFile } = await readerModule;
+  const api = fakeApi(), abort = new AbortController(); let received;
+  const pending = readFile(source, { api, format: 'text', signal: abort.signal, fetchImpl: async (_, options) => {
+    received = options.signal;
+    return new Response(new ReadableStream({ start(controller) {
+      controller.enqueue(new TextEncoder().encode('partially received'));
+      options.signal.addEventListener('abort', () => controller.error(new DOMException('Stopped', 'AbortError')), { once: true });
+    } }));
+  } });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  abort.abort();
+  await assert.rejects(pending, { name: 'AbortError' });
+  assert.equal(received.aborted, true); assert.equal(api.listening, false);
+  await assert.rejects(readFile(source, { api, signal: abort.signal, fetchImpl: () => { throw new Error('must not request'); } }), { name: 'AbortError' });
 });

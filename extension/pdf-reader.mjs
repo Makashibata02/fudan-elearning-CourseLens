@@ -16,6 +16,7 @@ export class PdfReader {
     this.pdf = pdf;
     if (pdf.numPages > 5000) throw new Error('PDF 页数超过 5000，请下载后阅读。');
     const first = await pdf.getPage(1), natural = first.getViewport({ scale: 1 });
+    if (this.destroyed) return;
     this.entries = Array.from({ length: pdf.numPages }, (_, index) => {
       const element = document.createElement('section'); element.className = 'pdf-page';
       element.setAttribute('aria-label', `第 ${index + 1} 页`);
@@ -27,7 +28,7 @@ export class PdfReader {
       return { element, paper, canvas, text, width: natural.width, height: natural.height, painted: false };
     });
     this.target.replaceChildren(...this.entries.map((entry) => entry.element)); this.target.hidden = false;
-    this.layout(); await this.paint(1); this.observe(); this.warm(); this.notify();
+    this.layout(); await this.paint(1); if (this.destroyed) return; this.observe(); this.warm(); this.notify();
   }
   layout() {
     const size = viewportSize(this.root);
@@ -117,6 +118,7 @@ export class PdfReader {
   destroy() {
     this.destroyed = true; this.epoch++; this.pending.clear(); this.observer?.disconnect(); this.root.removeEventListener('scroll', this.onScroll);
     for (const entry of this.entries) { entry.task?.cancel(); entry.textTask?.cancel(); entry.canvas.width = entry.canvas.height = 0; }
+    this.entries = []; this.pdf = null;
     this.target.replaceChildren(); this.target.hidden = true; this.target.style.minWidth = '';
   }
 }
