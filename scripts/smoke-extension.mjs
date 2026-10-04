@@ -52,6 +52,20 @@ try {
     args: [`--disable-extensions-except=${path.join(root, 'dist/chromium')}`, `--load-extension=${path.join(root, 'dist/chromium')}`],
   });
   context.setDefaultTimeout(30000);
+  await context.addInitScript(() => {
+    window.courselensMenuTrace = [];
+    const property = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'hidden');
+    Object.defineProperty(HTMLElement.prototype, 'hidden', {
+      get() { return property.get.call(this); },
+      set(value) {
+        if (this.id === 'more-menu') window.courselensMenuTrace.push({ value, stack: new Error().stack });
+        property.set.call(this, value);
+      },
+    });
+    for (const type of ['pointerdown', 'pointerup', 'click']) document.addEventListener(type, (event) => {
+      window.courselensMenuTrace.push({ type, target: event.target.id || event.target.tagName, x: event.clientX, y: event.clientY });
+    }, true);
+  });
   const watch = (page) => { page.on('download', (file) => downloads.push(file)); page.on('pageerror', (error) => pageErrors.push(error.message)); page.on('console', (msg) => { if (msg.type() === 'error') report.consoleErrors.push(msg.text()); }); };
   context.on('page', watch); context.pages().forEach(watch);
   context.on('request', (request) => { if (request.url().startsWith('https://')) report.network.push({ event: 'request', url: request.url(), type: request.resourceType() }); });
@@ -349,15 +363,6 @@ try {
     await course.locator('[data-action="close"]').click(); await course.locator('#redirect').click(); viewer = await panel(course);
     await viewer.waitForFunction(() => document.getElementById('status-title').textContent.includes('需要允许'));
     assert.equal(await viewer.locator('#permission-prompt').isVisible(), false);
-    await viewer.evaluate(() => {
-      const menu = document.getElementById('more-menu');
-      const property = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'hidden');
-      window.courselensMenuTrace = [];
-      Object.defineProperty(menu, 'hidden', {
-        get() { return property.get.call(this); },
-        set(value) { window.courselensMenuTrace.push({ value, stack: new Error().stack }); property.set.call(this, value); },
-      });
-    });
     await viewer.locator('#more-toggle').click();
     assert.equal(await viewer.locator('#more-menu').isVisible(), true);
     await course.setViewportSize({ width: 1200, height: 820 });
