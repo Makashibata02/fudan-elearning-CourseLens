@@ -90,7 +90,7 @@ for (const browser of ['chromium']) {
   await writeFile(path.join(output, 'demo.zip'), zipSync({
     '作业/两页示例.pdf': createDemoPdf(), '作业/公式与表格.docx': createDemoDocx(),
     '说明.txt': strToU8('ZIP 内的文件可以通过顶部下拉框切换。\nPDF / DOCX 默认连续滚动，使用“手动翻页”一次显示一页。'),
-  }));
+  }, { level: 6, mtime: new Date(2020, 0, 1), os: 0, attrs: 0 }));
   for (const file of ['pdf.mjs', 'pdf.worker.mjs']) await cp(path.join(vendor, 'legacy/build', file), path.join(output, 'vendor', file));
   await cp(path.join(vendor, 'web/pdf_viewer.css'), path.join(output, 'vendor/pdf_viewer.css'));
   for (const dir of ['cmaps', 'standard_fonts', 'wasm', 'web/images']) {

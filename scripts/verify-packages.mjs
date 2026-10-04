@@ -64,7 +64,11 @@ for (const browser of ['chromium']) {
   assert.equal(manifest.background.service_worker, 'background.js');
   assert.equal(manifest.minimum_chrome_version, '120');
   assert.equal(manifest.browser_specific_settings, undefined);
-  const demoZip = unzipSync(files['demo.zip']);
+  // A fixed DOS timestamp also makes the embedded ZIP portable across CI runs.
+  const demoBytes = Buffer.from(files['demo.zip']);
+  assert.equal(demoBytes.readUInt16LE(10), 0, 'demo ZIP time must be deterministic');
+  assert.equal(demoBytes.readUInt16LE(12), 0x5021, 'demo ZIP date must be 2020-01-01');
+  const demoZip = unzipSync(demoBytes);
   assert.ok(Object.keys(demoZip).some((name) => name.endsWith('.pdf')));
   assert.ok(Object.keys(demoZip).some((name) => name.endsWith('.docx')));
   console.log(`${browser}: checksum, reproducibility, manifest and ${Object.keys(files).length} resources verified`);
