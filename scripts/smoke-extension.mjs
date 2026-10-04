@@ -17,6 +17,7 @@ const channel = process.env.BROWSER_CHANNEL || 'chromium';
 assert.ok(['chromium', 'chrome', 'msedge'].includes(channel));
 const report = { platform: process.platform, channel, checks: [], passed: false };
 const downloads = [], pageErrors = [], unexpectedRequests = [];
+report.network = []; report.consoleErrors = [];
 const pdf = createDemoPdf(), docx = createDemoDocx();
 const heic = await readFile(path.join(root, 'tests/fixtures/with-alpha-512x512.heic'));
 const zip = zipSync({ '作业/答案.pdf': pdf, '作业/过程.docx': docx, '照片.heic': heic, '说明.txt': strToU8('ZIP 中文答案') });
@@ -31,7 +32,8 @@ const taHTML = '<!doctype html><html lang="zh"><head><title>模拟 SpeedGrader</
 let context, phase = 'launch';
 async function check(name, action) { phase = name; await action(); report.checks.push(name); console.log(`PASS ${name}`); }
 async function rendered(viewer, text) {
-  await viewer.locator('#status').waitFor({ state: 'hidden' });
+  try { await viewer.locator('#status').waitFor({ state: 'hidden', timeout: 70000 }); }
+  catch (error) { throw new Error(`${await viewer.locator('#status').textContent()}\n${error.message}`); }
   if (text) await viewer.locator('.textLayer').filter({ hasText: text }).first().waitFor({ state: 'visible' });
 }
 async function panel(page) {
@@ -46,8 +48,11 @@ try {
     args: [`--disable-extensions-except=${path.join(root, 'dist/chromium')}`, `--load-extension=${path.join(root, 'dist/chromium')}`],
   });
   context.setDefaultTimeout(30000);
-  const watch = (page) => { page.on('download', (file) => downloads.push(file)); page.on('pageerror', (error) => pageErrors.push(error.message)); };
+  const watch = (page) => { page.on('download', (file) => downloads.push(file)); page.on('pageerror', (error) => pageErrors.push(error.message)); page.on('console', (msg) => { if (msg.type() === 'error') report.consoleErrors.push(msg.text()); }); };
   context.on('page', watch); context.pages().forEach(watch);
+  context.on('request', (request) => { if (request.url().startsWith('https://')) report.network.push({ event: 'request', url: request.url(), type: request.resourceType() }); });
+  context.on('requestfinished', (request) => { if (request.url().startsWith('https://')) report.network.push({ event: 'finished', url: request.url() }); });
+  context.on('requestfailed', (request) => { if (request.url().startsWith('https://')) report.network.push({ event: 'failed', url: request.url(), failure: request.failure() }); });
   // Intercept every HTTP request, including permissions tests. No real login/profile.
   await context.route('**/*', async (route) => {
     const url = new URL(route.request().url());
