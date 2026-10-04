@@ -10,6 +10,7 @@ const pkg = JSON.parse(await readFile(path.join(root, 'package.json')));
 const names = [...new Set(execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean))].sort();
 const files = Object.create(null);
 for (const name of names) {
+  if (/^docs\/AUTHOR-MESSAGE\.md$/i.test(name)) continue;
   if (name.startsWith('/') || name.split('/').includes('..') || /^(?:\.git|node_modules|dist|output|backups)\//.test(name) || /(?:^|\/)\.env(?:\.|$)|\.(?:pem|key|log)$/.test(name)) continue;
   const target = path.resolve(root, name);
   if (!target.startsWith(root + path.sep)) throw new Error('Unsafe source path');

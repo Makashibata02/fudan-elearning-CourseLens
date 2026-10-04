@@ -9,3 +9,4 @@ output/
 *.pem
 *.key
 backups/
+/docs/AUTHOR-MESSAGE.md
