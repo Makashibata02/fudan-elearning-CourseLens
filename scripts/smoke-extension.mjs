@@ -29,9 +29,10 @@ const courseHTML = '<!doctype html><html lang="zh"><head><title>模拟课程</ti
   '<a id="pdf" href="/files/456">演示文件.pdf</a> <a id="docx" href="/files/457">公式.docx</a> <a id="heic" href="/files/458">苹果照片.heic</a> <a id="zip" href="/files/459">作业.zip</a> ' +
   '<a id="pptx" href="/files/460">现代课件.pptx</a> <a id="ppt" href="/files/461">旧版课件.ppt</a> <a id="jiff" href="/files/462">照片.jiff</a> <a id="jfif" href="/files/462">照片.jfif</a> <a id="redirect" href="/files/999">跨服务器.pdf</a> <a id="denied" href="/files/789">权限失效.pdf</a> <a class="download" href="/files/456/download" download>原下载</a></body></html>';
 const taHTML = '<!doctype html><html lang="zh"><head><title>模拟 SpeedGrader</title><link rel="icon" href="data:,"></head><body>' +
-  '<button id="next-student-button">切换学生</button><div id="left_side" style="position:relative;width:760px;height:680px;float:left"></div><div id="right_side">' +
+  '<style>body{margin:0;font:14px/1.6 system-ui,sans-serif;color:#24344a;background:#eef1f5}header{padding:14px 24px;background:white;border-bottom:1px solid #d9e1eb;display:flex;align-items:center;justify-content:space-between}header strong{font-size:18px}header span{color:#728094}.review-layout{display:grid;grid-template-columns:minmax(0,1fr)320px;gap:16px;padding:16px;height:calc(100vh - 80px);box-sizing:border-box}#left_side{position:relative;height:100%;border:1px solid #d9e1eb;border-radius:8px;overflow:hidden}#right_side{padding:22px;background:white;border:1px solid #d9e1eb;border-radius:8px}h2{margin:0 0 18px;font-size:18px}label{display:block;margin:20px 0 8px;font-weight:600}input,textarea{box-sizing:border-box;width:100%;font:inherit;padding:10px;border:1px solid #c6d2e2;border-radius:6px}textarea{height:140px}button{font:inherit;padding:7px 12px;background:white;border:1px solid #c6d2e2;border-radius:6px;cursor:pointer}#next-student-button{margin-top:18px}a{color:#2456a6}.hint{color:#728094;font-size:12px}</style>' +
+  '<header><strong>课程作业 · 模拟批改页面</strong><span>测试文件与虚构学生，无真实课程数据</span></header><main class="review-layout"><div id="left_side"></div><div id="right_side"><h2>作业批改</h2><p class="hint">学生 A · 测试提交</p>' +
   '<div id="submission_files_list"><a class="display_name" href="/courses/123/assignments/456/submissions/10?download=456&inline=1">演示文件.pdf</a></div>' +
-  '<input id="grade" value="7"><textarea id="comment">尚未提交的评语</textarea></div></body></html>';
+  '<label for="grade">成绩</label><input id="grade" value="7"><label for="comment">评语草稿</label><textarea id="comment">尚未提交的评语</textarea><button id="next-student-button">切换学生</button></div></main></body></html>';
 let context, phase = 'launch';
 async function check(name, action) { phase = name; await action(); report.checks.push(name); console.log(`PASS ${name}`); }
 async function rendered(viewer, text) {
@@ -133,7 +134,7 @@ try {
       input.value = '1'; input.dispatchEvent(new Event('input')); count.textContent = '/ 2'; return results.every(Boolean);
     });
     assert.ok(centered, 'Current page and total pages must be centered as one unit for different digit lengths');
-    await course.screenshot({ path: path.join(output, 'page-number-alignment.png') });
+    await course.locator('#fdta-preview section').screenshot({ path: path.join(output, 'page-number-alignment.png') });
     await viewer.locator('#pdf-controls').screenshot({ path: path.join(output, 'page-controls-centered.png') });
   });
   await check('preview fullscreen expands in place, restores with button or Escape, and does not reload the attachment', async () => {
@@ -144,6 +145,7 @@ try {
     assert.ok(await course.locator('#fdta-preview').evaluate((host) => { const rect = host.getBoundingClientRect(); return rect.left === 0 && rect.top === 0 && Math.abs(rect.width - innerWidth) <= 1 && Math.abs(rect.height - innerHeight) <= 1; }));
     assert.equal(await course.locator('[data-action="fullscreen"]').getAttribute('aria-label'), '还原窗口');
     assert.equal(await frame.evaluate(() => window.courselensFullscreenIdentity), 'same-context');
+    await frame.waitForFunction(() => document.querySelector('.paper').getBoundingClientRect().height < document.getElementById('workspace').clientHeight);
     await course.screenshot({ path: path.join(output, 'fullscreen-preview.png') });
     await course.locator('[data-action="fullscreen"]').click();
     const restored = await course.locator('#fdta-preview section').boundingBox(); assert.deepEqual(restored, size);
@@ -207,6 +209,9 @@ try {
   await check('DOCX pages and actual HEIC worker rendering', async () => {
     await course.locator('[data-action="close"]').click(); await course.locator('#docx').click(); viewer = await panel(course); await rendered(viewer);
     assert.ok(await viewer.locator('section.docx').count() >= 2);
+    await viewer.locator('#fit-mode').selectOption('width');
+    await course.locator('#fdta-preview section').screenshot({ path: path.join(output, 'docx-modal.png') });
+    await viewer.locator('#fit-mode').selectOption('page');
     await viewer.locator('#more-toggle').click(); await viewer.locator('#reading-mode').selectOption('page'); await viewer.locator('#more-toggle').click(); await viewer.locator('#next').click(); assert.equal(await viewer.locator('section.docx:not([hidden])').count(), 1);
     await course.locator('[data-action="close"]').click(); await course.locator('#heic').click(); viewer = await panel(course); await rendered(viewer);
     assert.ok(await viewer.locator('#other-document canvas').evaluate((el) => el.width === 512 && el.height === 512));
@@ -230,6 +235,20 @@ try {
     assert.ok(await viewer.locator('#more-menu').evaluate((menu) => { const rect = menu.getBoundingClientRect(); return rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight; }));
     await course.screenshot({ path: path.join(output, 'narrow-more-menu.png') });
     await viewer.locator('#more-toggle').click(); await course.setViewportSize({ width: 1400, height: 950 });
+  });
+  await check('open menus stay visible and within the preview when its viewport changes', async () => {
+    for (const name of ['more', 'download']) {
+      await viewer.locator(`#${name}-toggle`).click();
+      for (const width of [1100, 700, 390, 1400]) {
+        await course.setViewportSize({ width, height: 950 });
+        await viewer.waitForFunction((name) => {
+          const menu = document.getElementById(`${name}-menu`), trigger = document.getElementById(`${name}-toggle`);
+          const rect = menu.getBoundingClientRect(), button = trigger.getBoundingClientRect();
+          return !menu.hidden && trigger.getAttribute('aria-expanded') === 'true' && rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight && Math.abs(rect.top - button.bottom - 6) <= 1;
+        }, name);
+      }
+      await viewer.locator(`#${name}-toggle`).click();
+    }
   });
   await check('JIFF and JFIF course attachments and local files decode real JPEG bytes without changing downloads', async () => {
     for (const extension of ['jiff', 'jfif']) {
@@ -266,7 +285,11 @@ try {
       await viewer.locator('#archive-entry').selectOption(value); await rendered(viewer); await viewer.locator(selector).first().waitFor({ state: 'visible' });
       if (suffix === '.txt') assert.equal(await viewer.locator(selector).textContent(), 'ZIP 中文答案');
     }
-    await course.screenshot({ path: path.join(output, 'zip-modal.png') });
+    const selectedText = await viewer.locator('#archive-entry').inputValue();
+    const selectedPdf = await viewer.locator('#archive-entry option').evaluateAll((options) => options.find((option) => option.textContent.endsWith('.pdf')).value);
+    await viewer.locator('#archive-entry').selectOption(selectedPdf); await rendered(viewer, 'PDF preview works');
+    await course.locator('#fdta-preview section').screenshot({ path: path.join(output, 'zip-modal.png') });
+    await viewer.locator('#archive-entry').selectOption(selectedText); await rendered(viewer);
     const currentPending = course.waitForEvent('download'); await viewer.locator('#download').click(); const currentFile = await currentPending;
     const currentStream = await currentFile.createReadStream(), currentChunks = []; for await (const chunk of currentStream) currentChunks.push(chunk); assert.deepEqual(Buffer.concat(currentChunks), Buffer.from(strToU8('ZIP 中文答案')));
     const pages = context.pages().length;
@@ -326,18 +349,43 @@ try {
     await course.locator('[data-action="close"]').click(); await course.locator('#redirect').click(); viewer = await panel(course);
     await viewer.waitForFunction(() => document.getElementById('status-title').textContent.includes('需要允许'));
     assert.equal(await viewer.locator('#permission-prompt').isVisible(), false);
+    await viewer.evaluate(() => {
+      const menu = document.getElementById('more-menu');
+      const property = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'hidden');
+      window.courselensMenuTrace = [];
+      Object.defineProperty(menu, 'hidden', {
+        get() { return property.get.call(this); },
+        set(value) { window.courselensMenuTrace.push({ value, stack: new Error().stack }); property.set.call(this, value); },
+      });
+    });
     await viewer.locator('#more-toggle').click();
+    assert.equal(await viewer.locator('#more-menu').isVisible(), true);
+    await course.setViewportSize({ width: 1200, height: 820 });
+    await viewer.waitForFunction(() => !document.getElementById('more-menu').hidden && document.getElementById('more-toggle').getAttribute('aria-expanded') === 'true');
     const opened = context.waitForEvent('page'); opened.catch(() => {});
     await viewer.locator('#grant-more').click(); const permission = await opened;
     await permission.locator('#host').filter({ hasText: 'files.example.test' }).waitFor();
     assert.equal(await permission.locator('#allow').isEnabled(), true);
     assert.equal(await viewer.locator('#status-title').textContent(), '需要允许读取文件服务器');
-    const closed = permission.waitForEvent('close'); await permission.locator('#cancel').click(); await closed;
+    const closed = permission.waitForEvent('close'); closed.catch(() => {});
+    await permission.locator('#cancel').click({ noWaitAfter: true }).catch((error) => {
+      // A self-closing popup can destroy its target before headless Chromium acknowledges the click.
+      // Accept only that error for this popup, then independently require its close event and a live reader.
+      if (!permission.isClosed() || !error.message.includes('Target page, context or browser has been closed')) throw error;
+    });
+    await closed;
+    assert.equal(course.isClosed(), false); assert.equal(diagnostic.isClosed(), false);
+    assert.equal(await viewer.locator('#status-title').textContent(), '需要允许读取文件服务器');
     assert.deepEqual(await diagnostic.evaluate(() => chrome.permissions.getAll()), report.permissions);
   });
   assert.deepEqual(unexpectedRequests, []); assert.deepEqual(pageErrors, []); report.passed = true;
 } catch (error) {
   report.failedPhase = phase; report.error = error.stack; process.exitCode = 1; console.error(error);
+  report.menuDiagnostics = [];
+  if (context) for (const page of context.pages()) for (const frame of page.frames()) {
+    const trace = await frame.evaluate(() => window.courselensMenuTrace).catch(() => null);
+    if (trace) report.menuDiagnostics.push({ url: frame.url(), trace });
+  }
   if (context) for (const [i, page] of context.pages().entries()) await page.screenshot({ path: path.join(output, `failure-${i}.png`) }).catch(() => {});
 } finally {
   report.pageErrors = pageErrors; report.unexpectedRequests = unexpectedRequests;

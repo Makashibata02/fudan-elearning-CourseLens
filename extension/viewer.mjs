@@ -238,14 +238,20 @@ $('page').addEventListener('input', sizePageInput);
 function closeMenus() {
   for (const name of ['more', 'download']) { $(`${name}-menu`).hidden = true; $(`${name}-toggle`).setAttribute('aria-expanded', 'false'); }
 }
+function positionMenu(name) {
+  const menu = $(`${name}-menu`), rect = $(`${name}-toggle`).getBoundingClientRect();
+  menu.style.right = `${Math.max(8, innerWidth - rect.right)}px`; menu.style.top = `${rect.bottom + 6}px`;
+  menu.style.maxHeight = `${Math.max(0, innerHeight - rect.bottom - 16)}px`;
+}
+function positionOpenMenus() {
+  for (const name of ['more', 'download']) if (!$(`${name}-menu`).hidden) positionMenu(name);
+}
 for (const name of ['more', 'download']) {
   const button = $(`${name}-toggle`), menu = $(`${name}-menu`);
   button.addEventListener('click', () => {
     const open = menu.hidden; closeMenus(); if (!open) return;
     menu.hidden = false; button.setAttribute('aria-expanded', 'true');
-    const rect = button.getBoundingClientRect();
-    menu.style.right = `${Math.max(8, innerWidth - rect.right)}px`; menu.style.top = `${rect.bottom + 6}px`;
-    menu.style.maxHeight = `${Math.max(100, innerHeight - rect.bottom - 16)}px`;
+    positionMenu(name);
   });
   button.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowDown') { event.preventDefault(); if (menu.hidden) button.click(); menu.querySelector('a:not([hidden]), button:not([hidden]):not(:disabled), select:not(:disabled), input:not(:disabled)')?.focus(); }
@@ -254,9 +260,9 @@ for (const name of ['more', 'download']) {
 document.addEventListener('click', (event) => { if (!event.target.closest('.menu, #more-toggle, #download-toggle')) closeMenus(); });
 $('format-info').addEventListener('click', () => { $('format-note').hidden = !$('format-note').hidden; $('format-info').textContent = $('format-note').hidden ? '显示说明' : '收起说明'; closeMenus(); });
 let resizeTimer;
-const resize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (zoomMode !== 'custom') configure(); }, 100); };
+const resize = () => { positionOpenMenus(); clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (zoomMode !== 'custom') configure(); }, 100); };
 const resizeObserver = new ResizeObserver(resize); resizeObserver.observe($('workspace'));
-window.addEventListener('resize', closeMenus);
+window.addEventListener('resize', positionOpenMenus);
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && $('permission-prompt').open) { event.preventDefault(); $('permission-prompt').close(); return; }
   if (event.key === 'Escape' && (!$('more-menu').hidden || !$('download-menu').hidden)) { event.preventDefault(); const trigger = $('more-menu').hidden ? $('download-toggle') : $('more-toggle'); closeMenus(); trigger.focus(); return; }
@@ -267,7 +273,7 @@ document.addEventListener('keydown', (event) => {
 });
 window.addEventListener('pagehide', () => {
   previewController.abort(); resizeObserver.disconnect(); clearTimeout(resizeTimer);
-  window.removeEventListener('resize', closeMenus);
+  window.removeEventListener('resize', positionOpenMenus);
   api.permissions.onAdded?.removeListener(permissionAdded); window.removeEventListener('storage', storageChanged);
   if (autoClear && source) cacheMessage('preview-cache-remove');
   retainedBytes = null;

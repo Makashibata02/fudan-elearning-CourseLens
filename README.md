@@ -8,17 +8,19 @@
 
 ## 能做什么
 
+以下截图使用插件实际渲染的测试附件；批改区为模拟页面，不含真实课程或学生资料。
+
 普通课程“文件”或“作业”中的附件（无论是老师发布的还是你自己提交的）会在当前页面弹窗打开。右上角关闭叉号左侧的四角按钮可以让预览铺满当前页面，再次点击即可还原；全屏时按 Esc 先还原，再按一次关闭。点击“关闭”也能直接回到课程。
 
 ![课程作业附件弹窗预览](docs/images/course-assignment-preview.png)
 
-![已提交作业附件预览](docs/images/submitted-assignment-preview.png)
+![DOCX 正文、表格与公式预览（适应宽度）](docs/images/submitted-assignment-preview.png)
 
 助教批改作业时，SpeedGrader 使用左侧的阅读区域，多个附件可以用下拉框切换，需要专心看文件时也可以展开全屏，之后还原继续批改。
 
 ![助教批改页面中的附件阅读区域](docs/images/speedgrader-overview.png)
 
-![附件阅读器与翻页工具栏](docs/images/attachment-reader.png)
+![全屏阅读与翻页工具栏](docs/images/attachment-reader.png)
 
 
 默认“适应页面”，让一页课件、一页 PDF 或一张照片完整显示。字太小时，可以放大，或在同一个下拉框中选择“适应宽度”。多页文件默认连续滚动；习惯逐页看的话，在“更多功能 → 阅读方式”切换成“手动翻页”。
