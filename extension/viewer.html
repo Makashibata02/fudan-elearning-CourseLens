@@ -9,21 +9,29 @@
   <header class="toolbar">
     <div class="brand"><span id="badge" class="badge">PDF</span><h1 id="title">CourseLens</h1></div>
     <nav id="controls" class="controls" aria-label="文件阅读控制">
-      <span id="pdf-controls" class="controls"><button id="previous" title="上一页" disabled>上一页</button>
-      <label class="page-label"><span class="sr-only">页码</span><input id="page" type="number" value="1" min="1" disabled></label>
-      <span id="page-count">/ —</span>
-      <button id="next" title="下一页" disabled>下一页</button>
-      <span class="divider"></span></span>
-      <button id="zoom-out" aria-label="缩小" disabled>−</button><span id="zoom-label">100%</span>
-      <button id="zoom-in" aria-label="放大" disabled>+</button><button id="fit-page" disabled>适应页面</button><button id="fit" disabled>适应宽度</button>
-      <label class="sr-only" for="reading-mode">阅读方式</label><select id="reading-mode" disabled><option value="scroll">连续滚动</option><option value="page">手动翻页</option></select>
+      <span id="pdf-controls" class="control-group"><button id="previous" title="上一页" aria-label="上一页" disabled>‹</button>
+      <span id="page-indicator" class="page-indicator"><label class="page-label"><span class="sr-only">页码</span><input id="page" type="number" value="1" min="1" disabled></label><span id="page-count">/ —</span></span>
+      <button id="next" title="下一页" aria-label="下一页" disabled>›</button></span>
+      <span class="control-group"><button id="zoom-out" aria-label="缩小" disabled>−</button><span id="zoom-label">100%</span><button id="zoom-in" aria-label="放大" disabled>+</button></span>
+      <label class="sr-only" for="fit-mode">适应方式</label><select id="fit-mode" disabled><option value="page">适应页面</option><option value="width">适应宽度</option><option value="custom" hidden>自定义缩放</option></select>
     </nav>
-    <div class="actions"><a id="download" class="button primary" hidden>下载文件</a><a id="standalone" class="button" target="_blank" rel="noopener" hidden>独立阅读 / 授权</a><a id="original" class="button" target="_blank" rel="noopener noreferrer" hidden>打开原文件</a><button id="clear-preview" title="释放当前预览数据并停止读取">清理预览</button><a class="help" href="help.html" target="_blank" rel="noopener" aria-label="使用帮助">?</a></div>
+    <div class="actions"><span class="download-group"><a id="download" class="button primary" title="下载当前文件" hidden>下载</a><button id="download-toggle" aria-label="选择下载文件" aria-expanded="false" aria-controls="download-menu">▾</button></span><button id="more-toggle" aria-label="更多功能" aria-expanded="false" aria-controls="more-menu">更多 ⋯</button></div>
   </header>
+  <section id="download-menu" class="menu" aria-label="下载选项" hidden><a id="download-current" hidden>下载当前文件</a><a id="download-original" hidden>下载原始文件</a></section>
+  <section id="more-menu" class="menu" aria-label="更多功能" hidden>
+    <label class="menu-row" for="reading-mode">阅读方式<select id="reading-mode" disabled><option value="scroll">连续滚动</option><option value="page">手动翻页</option></select></label>
+    <label class="menu-row cleanup-option"><span>退出时自动清理</span><input id="auto-clear" type="checkbox" role="switch" checked aria-describedby="cleanup-detail"></label>
+    <p id="cleanup-detail" class="menu-note">关闭预览时释放文件缓存。</p>
+    <a id="standalone" target="_blank" rel="noopener" hidden>新标签页打开</a>
+    <button id="grant-more" hidden>文件服务器授权</button>
+    <button id="format-info" hidden>显示说明</button>
+    <a href="help.html" target="_blank" rel="noopener">使用帮助</a>
+  </section>
+  <dialog id="permission-prompt" aria-labelledby="permission-title"><h2 id="permission-title">允许读取文件服务器</h2><p>学校的附件转到了 <strong id="permission-host"></strong>，需要允许访问才能继续阅读。</p><div class="status-actions"><button id="prompt-allow" class="primary">继续授权</button><button id="prompt-later">稍后</button></div></dialog>
   <aside id="demo-note" hidden>这是内置示例，无需登录或联网。可试用适应页面、连续滚动、手动翻页和 ZIP 内文件切换。</aside>
   <aside id="format-note" hidden>DOCX 复杂版式可能与 Word 不同；如公式或图表缺失，请下载核对。</aside>
-  <section id="local-picker" hidden><label class="button">打开本地文件<input id="local-file" type="file" accept=".pdf,.docx,.heic,.heif,.zip,.png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.md,.csv,.tsv,.json,.log,.py,.c,.cpp,.h,.java,.js,.ts,.sql,.r,.tex,.doc,.xlsx,.ppt,.pptx" hidden></label><span>文件只在浏览器里读取。</span></section>
-  <section id="archive-panel" hidden><label for="archive-entry">ZIP 内文件</label><select id="archive-entry"></select><span id="archive-summary"></span><a id="archive-download" class="button">下载 ZIP</a></section>
+  <section id="local-picker" hidden><label class="button">打开本地文件<input id="local-file" type="file" accept=".pdf,.docx,.heic,.heif,.zip,.png,.jpg,.jpeg,.jfif,.jiff,.jif,.gif,.webp,.bmp,.txt,.md,.csv,.tsv,.json,.log,.py,.c,.cpp,.h,.java,.js,.ts,.sql,.r,.tex,.doc,.xlsx,.ppt,.pptx" hidden></label><span>文件只在浏览器里读取。</span></section>
+  <section id="archive-panel" hidden><label for="archive-entry">ZIP 内文件</label><select id="archive-entry"></select><span id="archive-summary"></span></section>
   <main id="workspace">
     <section id="status" class="status" aria-live="polite">
       <h2 id="status-title">正在读取 PDF…</h2><p id="status-detail">文件只在你的浏览器中处理。</p>
@@ -33,6 +41,6 @@
     <div id="other-document" hidden></div>
   </main>
   <footer>CourseLens · 复旦 eLearning 文件阅读器 · 非官方工具 · 文件在浏览器本地解析</footer>
-  <script src="catalog.js"></script><script src="core.js"></script><script type="module" src="viewer.mjs"></script>
+  <script src="catalog.js"></script><script src="core.js"></script><script src="preview-cache.js"></script><script type="module" src="viewer.mjs"></script>
 </body>
 </html>

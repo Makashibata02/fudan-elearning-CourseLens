@@ -53,10 +53,11 @@ test('permission requests identify one HTTPS host and never a wildcard', () => {
 
 test('background opens an extension viewer and ignores unauthorized messages', async () => {
   let listener, opened;
-  const context = { URL, FdPdf: core, CanvasPreviewCatalog: globalThis.CanvasPreviewCatalog, chrome: {
+  const context = { URL, setTimeout, clearTimeout, FdPdf: core, CanvasPreviewCatalog: globalThis.CanvasPreviewCatalog, chrome: {
     runtime: { id: 'id', getURL: (p) => `chrome-extension://id/${p}`, onMessage: { addListener(fn) { listener = fn; } }, onInstalled: { addListener() {} } },
-    tabs: { async create(options) { opened = options; } },
+    tabs: { async create(options) { opened = options; } }, permissions: {},
   } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../extension/preview-cache.js'), 'utf8'), context);
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../extension/background.js'), 'utf8'), context);
   assert.equal(listener({ type: 'open-pdf' }, { url: 'https://evil.test' }, () => {}), false);
   assert.equal(opened, undefined);

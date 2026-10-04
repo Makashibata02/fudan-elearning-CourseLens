@@ -116,9 +116,15 @@ test('ordinary course attachments open an accessible modal first and preserve na
   const host = win.document.getElementById('fdta-preview'), shadow = host.shadowRoot;
   assert.ok(shadow.querySelector('[role="dialog"][aria-modal="true"]')); assert.equal(host.style.position, 'fixed');
   assert.equal(new URL(shadow.querySelector('iframe').src).searchParams.get('format'), 'heic'); assert.equal(messages.length, 0);
+  const fullscreen = shadow.querySelector('[data-action="fullscreen"]'), frame = shadow.querySelector('iframe'), originalStyle = host.style.cssText;
+  fullscreen.click(); assert.equal(host.hasAttribute('data-fullscreen'), true); assert.equal(fullscreen.title, '还原窗口');
+  assert.equal(shadow.querySelector('iframe'), frame);
+  fullscreen.click(); assert.equal(host.hasAttribute('data-fullscreen'), false); assert.equal(host.style.cssText, originalStyle);
+  fullscreen.click(); win.document.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(host.hasAttribute('data-fullscreen'), false); assert.equal(win.document.getElementById('fdta-preview'), host);
   assert.equal(win.document.documentElement.style.overflow, 'hidden');
   const evt = new win.MouseEvent('click', { bubbles: true, cancelable: true }); win.document.getElementById('download').dispatchEvent(evt); assert.equal(evt.defaultPrevented, false);
-  shadow.querySelector('[data-action="tab"]').click(); await settle(); assert.equal(messages.length, 1);
+  assert.equal(shadow.querySelector('[data-action="tab"]'), null); assert.equal(messages.length, 0);
   shadow.querySelector('[data-action="close"]').click(); assert.equal(win.document.getElementById('fdta-preview'), null); assert.equal(win.document.documentElement.style.overflow, '');
   assert.equal(win.document.activeElement.id, 'start');
   win.document.getElementById('zip').click(); assert.equal(new URL(win.document.getElementById('fdta-preview').shadowRoot.querySelector('iframe').src).searchParams.get('format'), 'zip');

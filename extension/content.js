@@ -6,6 +6,7 @@
   const grading = /\/gradebook\/speed_grader\/?$/.test(location.pathname);
   let host, root, frame, selector, notice, active = false, current = null;
   let panelMode, savedOverflow, previousFocus;
+  let expanded = false, compactStyle, expandedOverflow;
   let files = [], signature = '', student = location.href, waitingFor = null, refreshTimer;
   const visible = (el) => !el.closest('[hidden], #submission_file_hidden') &&
     getComputedStyle(el).display !== 'none' && !el.closest('[style*="display: none"], [style*="display:none"]');
@@ -17,11 +18,6 @@
       if (file) unique.set(file.source, file);
     });
     return [...unique.values()];
-  }
-  function standalone(file) {
-    return api.runtime.sendMessage({ type: 'open-pdf', file }).then((result) => {
-      if (!result?.ok) throw new Error('无法打开阅读器，请刷新页面后重试。');
-    });
   }
   function clearPreview(message) {
     frame?.removeAttribute('src');
@@ -47,31 +43,60 @@
       section{height:100%;display:flex;flex-direction:column}header{display:flex;align-items:center;gap:8px;padding:10px;background:white;border-bottom:1px solid #d4dce7;flex-wrap:wrap}
       select{flex:1;min-width:100px;max-width:100%}button,select{font:inherit;border:1px solid #c6d2e2;border-radius:6px;padding:6px;background:white;color:#24344a}
       button{cursor:pointer}button:hover{background:#eef4ff}button:focus-visible,select:focus-visible{outline:3px solid #8cb5ff}
+      .window-button{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:none}
+      .window-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+      [data-action="close"]{font-size:21px;line-height:1}.restore-icon{display:none}
+      :host([data-fullscreen]) .expand-icon{display:none}:host([data-fullscreen]) .restore-icon{display:block}
+      :host([data-fullscreen]) section{width:100%;height:100%;max-width:none;max-height:none;border-radius:0;box-shadow:none;background:white}
       iframe{border:0;width:100%;flex:1;min-height:0;background:#edf1f6}p{padding:24px;overflow-wrap:anywhere}b{font-size:13px}
       ${modal ? 'section{width:min(1280px,94vw);height:92vh;border-radius:12px;overflow:hidden;box-shadow:0 20px 70px #081c4266;background:white}' : ''}
-      </style><section aria-label="文件阅读器" ${modal ? 'role="dialog" aria-modal="true"' : ''}><header><b>文件阅读</b><select aria-label="选择附件"></select><button data-action="tab" type="button">新标签页</button><button data-action="close" type="button">关闭</button></header><p role="status"></p><iframe title="作业文件预览" referrerpolicy="no-referrer" hidden></iframe></section>`;
+      </style><section aria-label="文件阅读器" ${modal ? 'role="dialog" aria-modal="true"' : ''}><header><select aria-label="选择附件"></select><button data-action="fullscreen" class="window-button" type="button" aria-label="全屏预览" title="全屏预览" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path class="expand-icon" d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><path class="restore-icon" d="M3 8h5V3M16 3v5h5M21 16h-5v5M8 21v-5H3"/></svg></button><button data-action="close" class="window-button" type="button" aria-label="关闭预览" title="关闭预览">×</button></header><p role="status"></p><iframe title="作业文件预览" referrerpolicy="no-referrer" hidden></iframe></section>`;
     selector = root.querySelector('select'); notice = root.querySelector('p'); frame = root.querySelector('iframe');
     selector.addEventListener('change', () => open(files[Number(selector.value)], panelMode === 'modal'));
-    root.querySelector('[data-action="tab"]').addEventListener('click', () => {
-      if (current) standalone(current).catch((error) => { if (notice) { notice.hidden = false; notice.textContent = error.message; } });
-    });
     root.querySelector('[data-action="close"]').addEventListener('click', close);
+    root.querySelector('[data-action="fullscreen"]').addEventListener('click', () => setExpanded(!expanded));
+    root.addEventListener('keydown', (event) => {
+      if (event.key !== 'Tab' || (panelMode !== 'modal' && !expanded)) return;
+      const controls = [...root.querySelectorAll('select,button,iframe')].filter((element) => !element.disabled && !element.hidden);
+      const index = controls.indexOf(root.activeElement);
+      if (event.shiftKey && index === 0) { event.preventDefault(); controls.at(-1).focus(); }
+      else if (!event.shiftKey && index === controls.length - 1) { event.preventDefault(); controls[0].focus(); }
+    });
     if (modal) {
       previousFocus = document.activeElement; savedOverflow = document.documentElement.style.overflow;
       document.documentElement.style.overflow = 'hidden'; document.body.append(host);
       host.addEventListener('click', (event) => { if (event.composedPath()[0] === host) close(); });
       root.querySelector('[data-action="close"]').focus();
-      root.addEventListener('keydown', (event) => {
-        if (event.key !== 'Tab') return;
-        const controls = [...root.querySelectorAll('select,button,iframe')].filter((element) => !element.disabled && !element.hidden);
-        const index = controls.indexOf(root.activeElement);
-        if (event.shiftKey && index === 0) { event.preventDefault(); controls.at(-1).focus(); }
-        else if (!event.shiftKey && index === controls.length - 1) { event.preventDefault(); controls[0].focus(); }
-      });
     } else left.append(host);
     return true;
   }
+  function setExpanded(value) {
+    if (!host || expanded === value) return;
+    expanded = value;
+    const section = root.querySelector('section'), button = root.querySelector('[data-action="fullscreen"]');
+    if (expanded) {
+      compactStyle = host.style.cssText; expandedOverflow = document.documentElement.style.overflow;
+      document.documentElement.style.overflow = 'hidden'; host.setAttribute('data-fullscreen', '');
+      host.style.cssText = 'position:fixed;inset:0;z-index:2147483646;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#edf1f6;display:block;';
+      // Top-layer presentation avoids moving/reloading the iframe, including in SpeedGrader.
+      if (typeof host.showPopover === 'function') {
+        host.setAttribute('popover', 'manual');
+        try { host.showPopover(); } catch { host.removeAttribute('popover'); }
+      }
+      section.setAttribute('role', 'dialog'); section.setAttribute('aria-modal', 'true');
+    } else {
+      if (host.hasAttribute('popover')) { try { host.hidePopover(); } catch { /* It may already be hidden. */ } host.removeAttribute('popover'); }
+      host.removeAttribute('data-fullscreen'); host.style.cssText = compactStyle;
+      document.documentElement.style.overflow = expandedOverflow || '';
+      compactStyle = expandedOverflow = null;
+      if (panelMode !== 'modal') { section.removeAttribute('role'); section.removeAttribute('aria-modal'); }
+    }
+    button.setAttribute('aria-pressed', String(expanded)); button.title = expanded ? '还原窗口' : '全屏预览'; button.setAttribute('aria-label', button.title);
+    button.focus();
+  }
+  function escapePreview() { if (expanded) setExpanded(false); else close(); }
   function close() {
+    if (expanded) setExpanded(false);
     active = false; waitingFor = null; clearPreview('');
     if (host?.hasAttribute('data-original-position') && host.parentElement) host.parentElement.style.position = host.dataset.originalPosition;
     host?.remove();
@@ -96,7 +121,7 @@
     student = location.href; options();
     selector.value = files.findIndex((item) => item.source === file.source);
     current = file; notice.hidden = true; frame.hidden = false;
-    frame.src = FdPdf.viewerUrl(file, (p) => api.runtime.getURL(p));
+    frame.src = FdPdf.viewerUrl({ ...file, context: location.href }, (p) => api.runtime.getURL(p));
   }
   function invalidate() {
     if (!active || panelMode !== 'ta') return;
@@ -138,11 +163,11 @@
     if (event.target.closest('#combo_box_container, #multiple_submissions, #students_selectmenu')) invalidate();
   }, true);
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && active && !event.target.matches?.('input, textarea, [contenteditable]')) close();
+    if (event.key === 'Escape' && active && !event.target.matches?.('input, textarea, [contenteditable]')) escapePreview();
   });
   window.addEventListener('message', (event) => {
     const extensionOrigin = api.runtime.getURL('').replace(/\/$/, '');
-    if (event.source === frame?.contentWindow && event.origin === extensionOrigin && event.data?.type === 'fdta-close') close();
+    if (event.source === frame?.contentWindow && event.origin === extensionOrigin && event.data?.type === 'fdta-close') escapePreview();
   });
   if (grading) {
     const observer = new MutationObserver((records) => {

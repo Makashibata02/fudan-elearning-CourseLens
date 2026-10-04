@@ -37,7 +37,7 @@ export async function readFile(source, { api, fetchImpl = fetch, format = 'pdf',
         ? '登录已失效或没有文件权限。请先打开 eLearning 登录，然后重试。'
         : `文件读取失败（HTTP ${response.status}）。`);
     }
-    if (Number(response.headers.get('content-length')) > limit) throw new Error('文件超过 100 MiB，请使用“打开原文件”。');
+    if (Number(response.headers.get('content-length')) > limit) throw new Error('文件超过 100 MiB，请从学校下载后使用本地软件阅读。');
     if (!response.body) throw new Error('文件服务返回了空内容。');
     const reader = response.body.getReader();
     const chunks = [];
@@ -48,7 +48,7 @@ export async function readFile(source, { api, fetchImpl = fetch, format = 'pdf',
       size += value.byteLength;
       if (size > limit) {
         await reader.cancel();
-        throw new Error('文件超过 100 MiB，请使用“打开原文件”。');
+        throw new Error('文件超过 100 MiB，请从学校下载后使用本地软件阅读。');
       }
       chunks.push(value);
     }

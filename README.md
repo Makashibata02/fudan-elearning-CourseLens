@@ -8,20 +8,22 @@
 
 ## 能做什么
 
-普通课程“文件”或“作业”中的附件（无论是老师发布的还是你自己提交的）会在当前页面弹窗打开，按 Esc 或点击“关闭”即可回到课程。
+普通课程“文件”或“作业”中的附件（无论是老师发布的还是你自己提交的）会在当前页面弹窗打开。右上角关闭叉号左侧的四角按钮可以让预览铺满当前页面，再次点击即可还原；全屏时按 Esc 先还原，再按一次关闭。点击“关闭”也能直接回到课程。
 
 ![课程作业附件弹窗预览](docs/images/course-assignment-preview.png)
 
 ![已提交作业附件预览](docs/images/submitted-assignment-preview.png)
 
-助教批改作业时，SpeedGrader 使用左侧的阅读区域，多个附件可以用下拉框切换。
+助教批改作业时，SpeedGrader 使用左侧的阅读区域，多个附件可以用下拉框切换，需要专心看文件时也可以展开全屏，之后还原继续批改。
 
 ![助教批改页面中的附件阅读区域](docs/images/speedgrader-overview.png)
 
 ![附件阅读器与翻页工具栏](docs/images/attachment-reader.png)
 
 
-默认“适应页面”，让一页课件、一页 PDF 或一张照片完整显示。多页文件默认连续滚动；习惯逐页看的话，可以切换成“手动翻页”。字太小时，还可以放大或选择“适应宽度”。
+默认“适应页面”，让一页课件、一页 PDF 或一张照片完整显示。字太小时，可以放大，或在同一个下拉框中选择“适应宽度”。多页文件默认连续滚动；习惯逐页看的话，在“更多功能 → 阅读方式”切换成“手动翻页”。
+
+“下载”默认保存当前文件，旁边的下拉菜单可以选择“下载当前文件”或“下载原始文件”。阅读 ZIP 时，当前文件是包内选中的附件，原始文件是整个 ZIP；普通附件的两项下载对应同一份文件。新标签页打开、显示说明和使用帮助都收在“更多功能”里，需要时再展开。
 
 | 文件 | 阅读方式 |
 | --- | --- |
@@ -29,7 +31,7 @@
 | DOCX | 阅读分页正文、表格、图片和支持的数学公式 |
 | PPT / PPTX | 按静态幻灯片阅读文字、图片和支持的图形；保留幻灯片顺序 |
 | HEIC / HEIF | 直接打开苹果手机照片，无需先转换格式；多图文件目前显示第一张 |
-| PNG / JPEG / GIF / WebP / BMP | 整张显示，也可以放大查看细节 |
+| PNG / JPEG（含 JIFF / JFIF / JIF 后缀）/ GIF / WebP / BMP | 整张显示，也可以放大查看细节 |
 | TXT / MD / CSV / JSON / 代码 / TEX 等 | 按纯文本阅读，支持常见中文编码 |
 | ZIP | 查看包内目录和文件，选择支持的附件直接阅读，也可单独下载 |
 
@@ -41,13 +43,13 @@ ZIP 内的文件也能直接阅读：在目录列表中选择文件，就可以�
 
 ## 安装
 
-当前版本 **2.2.1**，Chrome 和 Microsoft Edge 使用同一个安装包。可以直接下载 Release，也可以克隆仓库或下载源码后自行构建。
+Chrome 和 Microsoft Edge 使用同一个安装包。可以直接下载 Release，也可以克隆仓库或下载源码后自行构建。
 
 ### 下载 Release（推荐）
 
 不用安装 Node.js，下载、解压后就能加载插件。
 
-1. 打开 [Releases](https://github.com/Makashibata02/fudan-elearning-CourseLens/releases/latest)，在 Assets 中下载 `fudan-elearning-courselens-chromium-2.2.1.zip`。也可以[直接下载安装包](https://github.com/Makashibata02/fudan-elearning-CourseLens/releases/download/v2.2.1/fudan-elearning-courselens-chromium-2.2.1.zip)。
+1. 打开 [Releases](https://github.com/Makashibata02/fudan-elearning-CourseLens/releases/latest)，在 Assets 中下载名称含 `chromium` 的 ZIP 安装包。
 2. 解压到一个长期保留的文件夹。这个文件夹之后仍要保留，浏览器会从这里加载插件。
 3. Chrome 打开 `chrome://extensions`，Edge 打开 `edge://extensions`。开启“开发者模式”，点击“加载已解压的扩展”，选择包含 `manifest.json` 的文件夹。
 4. 在同一浏览器登录复旦 eLearning，刷新已经打开的课程页面，再点击附件文件名。
@@ -56,24 +58,24 @@ Release 中的 `chromium` ZIP 是插件安装包，`source` ZIP 是源码包，`
 
 ### 克隆仓库
 
-想跟进更新或修改插件，可以用 Git 获取源码：
+想自行构建或修改插件，可以用 Git 获取源码：
 
 ```sh
 git clone https://github.com/Makashibata02/fudan-elearning-CourseLens.git
 cd fudan-elearning-CourseLens
 ```
 
-接着按[从源码构建](#从源码构建)完成构建，再在扩展管理页加载 `dist/chromium`。以后在仓库目录运行 `git pull`，重新构建并重新加载插件即可更新。
+接着按[从源码构建](#从源码构建)完成构建，再在扩展管理页加载 `dist/chromium`。
 
 ### 下载源码后构建
 
-没有使用 Git 的话，可以下载 Release 中的 `fudan-elearning-courselens-source-2.2.1.zip`；想尝试 main 的最新代码，也可以在仓库首页点击 **Code → Download ZIP**。
+没有使用 Git 的话，可以下载 Release 中名称含 `source` 的 ZIP 源码包，也可以在仓库首页点击 **Code → Download ZIP**。
 
 解压后进入含有 `package.json` 的目录，按[从源码构建](#从源码构建)运行命令，再加载生成的 `dist/chromium`。这两种源码下载方式都需要 Node.js。
 
-### 更新与初次使用
+### 初次使用
 
-使用 Release 更新时，替换原安装目录中的文件，在扩展管理页点击“重新加载”，再刷新 eLearning。手动安装的版本不会自动更新。已启用其他同类预览脚本或插件的话，请先停用重复版本，避免点击冲突。
+安装后刷新已经打开的 eLearning 页面，再点击附件文件名。已启用其他同类预览脚本或插件的话，请先停用重复版本，避免点击冲突。
 
 ### 没有学校账号，也能先试试
 
@@ -85,7 +87,11 @@ cd fudan-elearning-CourseLens
 
 默认网站权限只覆盖复旦 eLearning。如果文件跳转到其他服务器，阅读器会显示实际域名，再由你选择是否允许访问。预览仍需要把文件数据传到浏览器，只有点击下载时才主动保存到下载目录。
 
-附件请求使用 `cache: "no-store"`，绕过浏览器已有的 HTTP 缓存，也不把本次响应写入 HTTP 缓存。关闭预览、切换附件或切换学生时会自动释放相应阅读资源；工具栏中的“清理预览”可以立即停止当前读取或解析，释放文件临时链接、页面和 ZIP 数据。清理后按“重新读取”可再次打开附件，本地文件需要重新选择。
+“更多功能”中的 **“退出时自动清理”默认开启**，不用每次手动点清理。关闭预览、退出阅读标签页、切换附件或学生时，旧预览会停止读取和解析，释放文件临时链接、页面和 ZIP 数据。开关会记住你的选择。
+
+如果经常重复打开同一份附件，可以关闭这个开关。插件会在内存中临时复用小文件，按所在课程／学生页面隔离：单份最多 8 MiB，总量最多 24 MiB、8 个文件，最多保留 5 分钟，浏览器也可能提前回收。再次开启开关会清空这份临时缓存。本地选择的文件不会放进缓存，关闭后仍需重新选择。
+
+无论开关是否开启，附件网络请求都使用 `cache: "no-store"`，绕过已有 HTTP 缓存，也不把本次响应写入 HTTP 缓存。插件只保存开关设置，不持久保存作业文件。
 
 这项机制不会清除浏览器以前留下的缓存、已下载文件或历史记录，也不承诺数据在磁盘或内存中完全无痕。需要清除历史缓存时，请使用浏览器设置。详见[隐私说明](docs/PRIVACY.md)。
 

@@ -17,7 +17,7 @@ test('SpeedGrader submission download routes preserve authorization and remove i
 });
 
 test('image/text formats and unsupported office formats do not turn into PDFs', () => {
-  for (const [name, format] of [['a.DOCX', 'docx'], ['a.PPT', 'powerpoint'], ['a.PPTX', 'powerpoint'], ['图.jpg', 'image'], ['a.py', 'text'], ['a.csv', 'text'], ['旧.doc', 'unsupported'], ['a.xlsx', 'unsupported']]) {
+  for (const [name, format] of [['a.DOCX', 'docx'], ['a.PPT', 'powerpoint'], ['a.PPTX', 'powerpoint'], ['图.jpg', 'image'], ['图.JIFF', 'image'], ['图.jfif', 'image'], ['图.jif', 'image'], ['a.py', 'text'], ['a.csv', 'text'], ['旧.doc', 'unsupported'], ['a.xlsx', 'unsupported']]) {
     assert.equal(core.describe(`${origin}/files/1`, name).format, format);
     assert.equal(core.filename(name), name);
   }
@@ -36,6 +36,9 @@ test('SpeedGrader shows inline DOCX, replaces it for another student, and keeps 
   const { dom, win, doc, messages } = fixture(); t.after(() => dom.window.close());
   doc.querySelector('a.display_name').click();
   let shadow = doc.getElementById('fdta-preview').shadowRoot, frame = shadow.querySelector('iframe');
+  const host = doc.getElementById('fdta-preview'), left = doc.getElementById('left_side'), fullscreen = shadow.querySelector('[data-action="fullscreen"]');
+  fullscreen.click(); assert.equal(host.hasAttribute('data-fullscreen'), true); assert.equal(host.parentElement, left); assert.equal(shadow.querySelector('iframe'), frame);
+  fullscreen.click(); assert.equal(host.style.position, 'absolute'); assert.equal(host.parentElement, left); assert.equal(doc.documentElement.style.overflow, '');
   assert.equal(new URL(frame.src).searchParams.get('format'), 'docx'); assert.equal(messages.length, 0);
   const downloadEvent = new win.MouseEvent('click', { bubbles: true, cancelable: true });
   doc.querySelector('[download]').dispatchEvent(downloadEvent); assert.equal(downloadEvent.defaultPrevented, false);
@@ -48,7 +51,9 @@ test('SpeedGrader shows inline DOCX, replaces it for another student, and keeps 
   await pause();
   assert.equal(new URL(frame.src).searchParams.get('name'), '第二份.pdf');
   assert.equal(doc.getElementById('grade').value, '7'); assert.equal(doc.getElementById('comment').value, '尚未提交的评语');
-  shadow.querySelector('[data-action="tab"]').click(); await pause(10); assert.equal(messages[0].file.name, '第二份.pdf');
+  assert.equal(shadow.querySelector('[data-action="tab"]'), null);
+  assert.equal(new URL(frame.src).searchParams.get('context'), win.location.href);
+  assert.equal(messages.length, 0);
   doc.getElementById('submission_files_list').replaceChildren(); await pause();
   assert.equal(frame.hidden, true); assert.match(shadow.querySelector('p').textContent, /没有可阅读/);
   shadow.querySelector('[data-action="close"]').click(); assert.equal(doc.getElementById('fdta-preview'), null);

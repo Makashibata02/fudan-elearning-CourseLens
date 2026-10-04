@@ -41,7 +41,7 @@
   }
   function viewerUrl(file, getURL) {
     const url = new URL(getURL('viewer.html'));
-    for (const key of ['source', 'original', 'name', 'format']) url.searchParams.set(key, file[key] || '');
+    for (const key of ['source', 'original', 'name', 'format', 'context']) url.searchParams.set(key, file[key] || '');
     return url.href;
   }
   function allowedMessage(message, sender, extensionId) {
