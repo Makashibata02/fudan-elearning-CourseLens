@@ -63,7 +63,7 @@ try {
       if (id === '999') return route.fulfill({ status: 302, headers: { location: 'https://files.example.test/demo.pdf' } });
       if (id && files.has(id)) {
         if (url.pathname.includes('/submissions/') && route.request().headers().accept !== '*/*') return route.fulfill({ status: 406, body: 'Not acceptable' });
-        const [contentType, body] = files.get(id); return route.fulfill({ contentType, body });
+        const [contentType, body] = files.get(id); return route.fulfill({ contentType, body: Buffer.from(body) });
       }
       if (url.pathname === '/courses/123/assignments/456') return route.fulfill({ contentType: 'text/html; charset=utf-8', body: courseHTML });
       if (url.pathname === '/courses/123/gradebook/speed_grader') return route.fulfill({ contentType: 'text/html; charset=utf-8', body: taHTML });
