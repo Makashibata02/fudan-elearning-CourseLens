@@ -12,6 +12,9 @@ import { zipSync, strToU8 } from 'fflate';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(root, 'output/playwright/ci');
+// Keep each run's evidence self-contained; a passing run must not retain old failure screenshots.
+assert.equal(path.relative(root, output).split(path.sep).join('/'), 'output/playwright/ci');
+await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 const profile = await mkdtemp(path.join(tmpdir(), 'canvas-preview-smoke-'));
 const channel = process.env.BROWSER_CHANNEL || 'chromium';
@@ -43,6 +46,17 @@ async function rendered(viewer, text) {
 async function panel(page) {
   const iframe = page.locator('#fdta-preview iframe'); await iframe.waitFor({ state: 'visible' });
   return (await iframe.elementHandle()).contentFrame();
+}
+async function toggleMenu(viewer, name = 'more') {
+  // Headed Edge can acknowledge an OOPIF click before its surface is ready after
+  // tab/layout changes. Focus the page and let two paint frames settle first.
+  await viewer.page().bringToFront();
+  await viewer.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const menu = viewer.locator(`#${name}-menu`), button = viewer.locator(`#${name}-toggle`);
+  const wasVisible = await menu.isVisible();
+  await button.click();
+  await menu.waitFor({ state: wasVisible ? 'hidden' : 'visible' });
+  assert.equal(await button.getAttribute('aria-expanded'), String(!wasVisible));
 }
 try {
   context = await chromium.launchPersistentContext(profile, {
@@ -170,8 +184,8 @@ try {
     assert.equal(await frame.evaluate(() => window.courselensFullscreenIdentity), 'same-context');
   });
   await check('automatic exit cleanup revokes file URLs and rereads on reopening', async () => {
-    await viewer.locator('#more-toggle').click(); assert.equal(await viewer.locator('#auto-clear').isChecked(), true);
-    await viewer.locator('#more-toggle').click();
+    await toggleMenu(viewer); assert.equal(await viewer.locator('#auto-clear').isChecked(), true);
+    await toggleMenu(viewer);
     const blob = await viewer.locator('#download').getAttribute('href');
     const before = report.network.filter((item) => item.event === 'request' && item.type === 'fetch').length;
     await course.locator('[data-action="close"]').click();
@@ -181,29 +195,29 @@ try {
     assert.ok(report.network.filter((item) => item.event === 'request' && item.type === 'fetch').length > before);
   });
   await check('cleanup preference persists, temporary cache reuses exact bytes, and enabling cleanup discards it', async () => {
-    await viewer.locator('#more-toggle').click(); await viewer.locator('#auto-clear').uncheck();
+    await toggleMenu(viewer); await viewer.locator('#auto-clear').uncheck();
     await viewer.waitForFunction(async () => Boolean((await chrome.runtime.sendMessage({ type: 'preview-cache-get' }))?.data));
     await course.locator('[data-action="close"]').click();
     const before = report.network.filter((item) => item.event === 'request' && item.type === 'fetch').length;
     await course.locator('#pdf').click(); viewer = await panel(course); await rendered(viewer, 'PDF preview works');
     assert.equal(report.network.filter((item) => item.event === 'request' && item.type === 'fetch').length, before);
-    await viewer.locator('#more-toggle').click(); assert.equal(await viewer.locator('#auto-clear').isChecked(), false);
+    await toggleMenu(viewer); assert.equal(await viewer.locator('#auto-clear').isChecked(), false);
     await viewer.locator('#auto-clear').check();
     await viewer.waitForFunction(async () => !(await chrome.runtime.sendMessage({ type: 'preview-cache-get' }))?.data);
     await course.locator('[data-action="close"]').click(); await course.locator('#pdf').click(); viewer = await panel(course); await rendered(viewer, 'PDF preview works');
     assert.ok(report.network.filter((item) => item.event === 'request' && item.type === 'fetch').length > before);
-    await viewer.locator('#more-toggle').click(); assert.equal(await viewer.locator('#auto-clear').isChecked(), true); await viewer.locator('#more-toggle').click();
+    await toggleMenu(viewer); assert.equal(await viewer.locator('#auto-clear').isChecked(), true); await toggleMenu(viewer);
   });
   await check('scroll tracking, manual navigation and zoom', async () => {
     await viewer.locator('#workspace').evaluate((root) => { root.scrollTop = root.scrollHeight; });
     await viewer.waitForFunction(() => document.getElementById('page').value === '2');
-    await viewer.locator('#more-toggle').click(); await viewer.locator('#reading-mode').selectOption('page'); await viewer.locator('#more-toggle').click(); await viewer.locator('#previous').click(); await rendered(viewer, 'PDF preview works');
+    await toggleMenu(viewer); await viewer.locator('#reading-mode').selectOption('page'); await toggleMenu(viewer); await viewer.locator('#previous').click(); await rendered(viewer, 'PDF preview works');
     assert.equal(await viewer.locator('.pdf-page:not([hidden])').count(), 1);
     await viewer.locator('#next').click(); await rendered(viewer, 'Second page');
     const before = await viewer.locator('#zoom-label').textContent(); await viewer.locator('#zoom-in').click();
     await viewer.waitForFunction((before) => document.getElementById('zoom-label').textContent !== before, before);
     await viewer.locator('#fit-mode').selectOption('width'); await viewer.locator('#fit-mode').selectOption('page');
-    await viewer.locator('#more-toggle').click(); await viewer.locator('#reading-mode').selectOption('scroll'); await viewer.locator('#more-toggle').click(); assert.equal(await viewer.locator('.pdf-page:not([hidden])').count(), 2);
+    await toggleMenu(viewer); await viewer.locator('#reading-mode').selectOption('scroll'); await toggleMenu(viewer); assert.equal(await viewer.locator('.pdf-page:not([hidden])').count(), 2);
     assert.equal(downloads.length, 0);
   });
   await check('explicit download exact bytes and optional new tab', async () => {
@@ -211,13 +225,13 @@ try {
     assert.equal(file.suggestedFilename(), '演示文件.pdf'); assert.equal(await file.failure(), null);
     const stream = await file.createReadStream(), chunks = []; for await (const chunk of stream) chunks.push(chunk); assert.deepEqual(Buffer.concat(chunks), pdf);
     const pageCount = context.pages().length;
-    await viewer.locator('#download-toggle').click();
+    await toggleMenu(viewer, 'download');
     assert.deepEqual(await viewer.locator('#download-menu a').allTextContents(), ['下载当前文件', '下载原始文件']);
     assert.equal(await viewer.locator('#download-original').getAttribute('href'), await viewer.locator('#download').getAttribute('href'));
     const originalPending = course.waitForEvent('download'); await viewer.locator('#download-original').click(); const originalFile = await originalPending;
     const originalStream = await originalFile.createReadStream(), originalChunks = []; for await (const chunk of originalStream) originalChunks.push(chunk); assert.deepEqual(Buffer.concat(originalChunks), pdf);
-    assert.equal(context.pages().length, pageCount); await viewer.locator('#download-toggle').click();
-    const opened = context.waitForEvent('page'); await viewer.locator('#more-toggle').click(); await viewer.locator('#standalone').click(); await viewer.locator('#more-toggle').click(); const standalone = await opened;
+    assert.equal(context.pages().length, pageCount); await toggleMenu(viewer, 'download');
+    const opened = context.waitForEvent('page'); await toggleMenu(viewer); await viewer.locator('#standalone').click(); await toggleMenu(viewer); const standalone = await opened;
     await rendered(standalone, 'PDF preview works'); assert.ok(standalone.url().startsWith(base)); await standalone.close();
   });
   await check('DOCX pages and actual HEIC worker rendering', async () => {
@@ -226,7 +240,7 @@ try {
     await viewer.locator('#fit-mode').selectOption('width');
     await course.locator('#fdta-preview section').screenshot({ path: path.join(output, 'docx-modal.png') });
     await viewer.locator('#fit-mode').selectOption('page');
-    await viewer.locator('#more-toggle').click(); await viewer.locator('#reading-mode').selectOption('page'); await viewer.locator('#more-toggle').click(); await viewer.locator('#next').click(); assert.equal(await viewer.locator('section.docx:not([hidden])').count(), 1);
+    await toggleMenu(viewer); await viewer.locator('#reading-mode').selectOption('page'); await toggleMenu(viewer); await viewer.locator('#next').click(); assert.equal(await viewer.locator('section.docx:not([hidden])').count(), 1);
     await course.locator('[data-action="close"]').click(); await course.locator('#heic').click(); viewer = await panel(course); await rendered(viewer);
     assert.ok(await viewer.locator('#other-document canvas').evaluate((el) => el.width === 512 && el.height === 512));
     await course.screenshot({ path: path.join(output, 'heic-modal.png') });
@@ -245,14 +259,14 @@ try {
       const rect = document.querySelector('#other-document canvas').getBoundingClientRect(), root = document.getElementById('workspace');
       return rect.width <= root.clientWidth - 16 && rect.height <= root.clientHeight - 16;
     });
-    await viewer.locator('#more-toggle').click();
+    await toggleMenu(viewer);
     assert.ok(await viewer.locator('#more-menu').evaluate((menu) => { const rect = menu.getBoundingClientRect(); return rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight; }));
     await course.screenshot({ path: path.join(output, 'narrow-more-menu.png') });
-    await viewer.locator('#more-toggle').click(); await course.setViewportSize({ width: 1400, height: 950 });
+    await toggleMenu(viewer); await course.setViewportSize({ width: 1400, height: 950 });
   });
   await check('open menus stay visible and within the preview when its viewport changes', async () => {
     for (const name of ['more', 'download']) {
-      await viewer.locator(`#${name}-toggle`).click();
+      await toggleMenu(viewer, name);
       for (const width of [1100, 700, 390, 1400]) {
         await course.setViewportSize({ width, height: 950 });
         await viewer.waitForFunction((name) => {
@@ -261,7 +275,7 @@ try {
           return !menu.hidden && trigger.getAttribute('aria-expanded') === 'true' && rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight && Math.abs(rect.top - button.bottom - 6) <= 1;
         }, name);
       }
-      await viewer.locator(`#${name}-toggle`).click();
+      await toggleMenu(viewer, name);
     }
   });
   await check('JIFF and JFIF course attachments and local files decode real JPEG bytes without changing downloads', async () => {
@@ -284,7 +298,7 @@ try {
     await course.locator('[data-action="close"]').click(); await course.locator('#pptx').click(); viewer = await panel(course); await rendered(viewer);
     assert.equal(await viewer.locator('.ppt-page').count(), 2); assert.equal(await viewer.locator('#reading-mode').inputValue(), 'scroll');
     assert.ok(await viewer.locator('.ppt-page').first().evaluate((el) => el.getBoundingClientRect().height < document.getElementById('workspace').clientHeight));
-    await viewer.locator('#more-toggle').click(); await viewer.locator('#reading-mode').selectOption('page'); await viewer.locator('#more-toggle').click(); await viewer.locator('#next').click();
+    await toggleMenu(viewer); await viewer.locator('#reading-mode').selectOption('page'); await toggleMenu(viewer); await viewer.locator('#next').click();
     assert.equal(await viewer.locator('.ppt-page:not([hidden])').count(), 1); await viewer.locator('.ppt-page:not([hidden]) svg text').filter({ hasText: '第二页' }).first().waitFor({ state: 'visible' });
     await viewer.locator('#fit-mode').selectOption('width'); await viewer.locator('#fit-mode').selectOption('page'); await course.screenshot({ path: path.join(output, 'pptx-modal.png') });
     await course.locator('[data-action="close"]').click(); await course.locator('#ppt').click(); viewer = await panel(course); await rendered(viewer);
@@ -307,14 +321,14 @@ try {
     const currentPending = course.waitForEvent('download'); await viewer.locator('#download').click(); const currentFile = await currentPending;
     const currentStream = await currentFile.createReadStream(), currentChunks = []; for await (const chunk of currentStream) currentChunks.push(chunk); assert.deepEqual(Buffer.concat(currentChunks), Buffer.from(strToU8('ZIP 中文答案')));
     const pages = context.pages().length;
-    await viewer.locator('#download-toggle').click(); assert.equal(await viewer.locator('#download-original').isVisible(), true);
+    await toggleMenu(viewer, 'download'); assert.equal(await viewer.locator('#download-original').isVisible(), true);
     assert.equal(await viewer.locator('#download-current').getAttribute('href'), await viewer.locator('#download').getAttribute('href'));
     assert.notEqual(await viewer.locator('#download-original').getAttribute('href'), await viewer.locator('#download').getAttribute('href'));
     await course.screenshot({ path: path.join(output, 'zip-download-menu.png') });
     const pending = course.waitForEvent('download'); await viewer.locator('#download-original').click(); const file = await pending;
     const stream = await file.createReadStream(), chunks = []; for await (const chunk of stream) chunks.push(chunk); assert.deepEqual(Buffer.concat(chunks), Buffer.from(zip));
     assert.equal(context.pages().length, pages);
-    await viewer.locator('#download-toggle').click();
+    await toggleMenu(viewer, 'download');
     const archiveBlob = await viewer.locator('#download-original').getAttribute('href');
     await course.locator('[data-action="close"]').click();
     assert.equal(await diagnostic.evaluate(async (url) => { try { await fetch(url); return false; } catch { return true; } }, archiveBlob), true);
@@ -363,7 +377,7 @@ try {
     await course.locator('[data-action="close"]').click(); await course.locator('#redirect').click(); viewer = await panel(course);
     await viewer.waitForFunction(() => document.getElementById('status-title').textContent.includes('需要允许'));
     assert.equal(await viewer.locator('#permission-prompt').isVisible(), false);
-    await viewer.locator('#more-toggle').click();
+    await toggleMenu(viewer);
     assert.equal(await viewer.locator('#more-menu').isVisible(), true);
     await course.setViewportSize({ width: 1200, height: 820 });
     await viewer.waitForFunction(() => !document.getElementById('more-menu').hidden && document.getElementById('more-toggle').getAttribute('aria-expanded') === 'true');
